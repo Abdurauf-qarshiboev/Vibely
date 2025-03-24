@@ -1,5 +1,7 @@
 /.idea/
 WebDevProject.iml
+/backend/.idea
+/frontend/.idea
 
 *#
 *.iml
