@@ -1,4 +1,4 @@
-package com.webdev.project.backend.authentication.utils;
+package com.webdev.project.backend.utils;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
