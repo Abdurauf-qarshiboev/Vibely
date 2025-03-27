@@ -31,6 +31,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String phone;
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private UserRole role;
 

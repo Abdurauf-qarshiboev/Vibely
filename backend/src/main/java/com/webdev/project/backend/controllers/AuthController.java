@@ -2,9 +2,13 @@ package com.webdev.project.backend.controllers;
 
 import com.webdev.project.backend.dto.UserDTO;
 import com.webdev.project.backend.entities.User;
+import com.webdev.project.backend.enums.UserRole;
+import com.webdev.project.backend.repositories.UserRepository;
 import com.webdev.project.backend.services.CustomUserDetailsService;
 import com.webdev.project.backend.utils.JwtUtils;
 import com.webdev.project.backend.requests.LoginRequest;
+import com.webdev.project.backend.utils.ResponseUtil;
+import com.webdev.project.backend.responses.ErrorResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +31,7 @@ public class AuthController {
     private final CustomUserDetailsService userDetailsService;
     private final UserService userService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, CustomUserDetailsService userDetailsService, UserService userService) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, CustomUserDetailsService userDetailsService, UserService userService, UserRepository userRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
@@ -35,7 +39,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -47,24 +51,35 @@ public class AuthController {
             UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getUsername());
             String token = jwtUtils.generateToken(userDetails.getUsername());
 
-            Map<String, String> response = new HashMap<>();
-            response.put("token", token);
-            return ResponseEntity.ok(response);
+            Map<String, String> tokenMap = new HashMap<>();
+            tokenMap.put("token", token);
+
+            ResponseEntity<Map<String, String>> originalResponse = new ResponseEntity<>(tokenMap, HttpStatus.OK);
+
+            return ResponseUtil.success(originalResponse, "Login successful");
+
         } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseUtil.error("AUTH_001", "Invalid username or password", HttpStatus.UNAUTHORIZED);
+        } catch (Exception e) {
+            return ResponseUtil.error("AUTH_002", "Authentication failed", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserDTO> registerUser(@Valid @RequestBody User user) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
         try {
+            user.setRole(UserRole.USER); // Users can't sign in as ADMIN
             User createdUser = userService.createUser(user);
-            return new ResponseEntity<>(new UserDTO(createdUser), HttpStatus.CREATED);
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
 
+            return ResponseUtil.success(
+                    new ResponseEntity<>(new UserDTO(createdUser), HttpStatus.CREATED),
+                    "User created successfully"
+            );
+
+        } catch (BadCredentialsException e) {
+            return ResponseUtil.error("REG_002", "Invalid credentials", HttpStatus.UNAUTHORIZED);
+        } catch (Exception e) {
+            return ResponseUtil.error("REG_002", "Registration failed", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
