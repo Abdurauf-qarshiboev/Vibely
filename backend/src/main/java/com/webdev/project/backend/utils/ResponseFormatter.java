@@ -1,7 +1,5 @@
 package com.webdev.project.backend.utils;
 
-import org.springframework.http.ResponseEntity;
-
 public class ResponseFormatter<T> {
     private boolean success;
     private T data;

@@ -3,7 +3,6 @@ package com.webdev.project.backend.controllers;
 import com.webdev.project.backend.dto.UserDTO;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.requests.UserUpdateRequest;
-import com.webdev.project.backend.responses.ErrorResponse;
 import com.webdev.project.backend.services.UserService;
 import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;

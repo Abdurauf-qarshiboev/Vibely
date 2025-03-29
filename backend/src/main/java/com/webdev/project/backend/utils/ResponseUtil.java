@@ -1,7 +1,6 @@
 package com.webdev.project.backend.utils;
 
 import com.webdev.project.backend.responses.ErrorResponse;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 

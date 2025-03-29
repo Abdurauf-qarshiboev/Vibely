@@ -9,7 +9,6 @@ import com.webdev.project.backend.services.CustomUserDetailsService;
 import com.webdev.project.backend.utils.JwtUtils;
 import com.webdev.project.backend.requests.LoginRequest;
 import com.webdev.project.backend.utils.ResponseUtil;
-import com.webdev.project.backend.responses.ErrorResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
