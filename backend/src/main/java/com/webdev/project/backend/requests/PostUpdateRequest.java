@@ -1,15 +1,15 @@
 package com.webdev.project.backend.requests;
 
-public class UpdatePostRequest {
+public class PostUpdateRequest {
     private String title;
     private String body;
     private Boolean isPrivate;
     private String hashtags;
 
-    public UpdatePostRequest() {
+    public PostUpdateRequest() {
     }
 
-    public UpdatePostRequest(String title, String body, Boolean isPrivate, String hashtags) {
+    public PostUpdateRequest(String title, String body, Boolean isPrivate, String hashtags) {
         this.title = title;
         this.body = body;
         this.isPrivate = isPrivate;
