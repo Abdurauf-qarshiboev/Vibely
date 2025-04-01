@@ -57,13 +57,14 @@ public class PostController {
     }
 
 
-    @GetMapping("/user/{username}")
-    public ResponseEntity<List<PostDTO>> getPostsByUser(@PathVariable String username) {
+    @GetMapping("/user")
+    public ResponseEntity<List<PostDTO>> getPostsByUser(@RequestParam("user") String username) {
         Optional<User> userOptional = userService.findByUsername(username);
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+
 
         User user = userOptional.get();
         List<Post> posts = postService.getPostsByUser(user);
