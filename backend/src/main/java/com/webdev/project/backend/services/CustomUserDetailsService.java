@@ -1,7 +1,7 @@
-package com.webdev.project.backend.authentication.services;
+package com.webdev.project.backend.services;
 
-import com.webdev.project.backend.authentication.entities.User;
-import com.webdev.project.backend.authentication.repositories.UserRepository;
+import com.webdev.project.backend.entities.User;
+import com.webdev.project.backend.repositories.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

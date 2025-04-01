@@ -1,4 +1,4 @@
-package com.webdev.project.backend.authentication.requests;
+package com.webdev.project.backend.requests;
 
 public class LoginRequest {
     private String username;

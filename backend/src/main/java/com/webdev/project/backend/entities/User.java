@@ -1,7 +1,7 @@
-package com.webdev.project.backend.authentication.entities;
+package com.webdev.project.backend.entities;
 
-import com.webdev.project.backend.authentication.enums.UserRole;
-import com.webdev.project.backend.authentication.utils.PasswordUtils;
+import com.webdev.project.backend.enums.UserRole;
+import com.webdev.project.backend.utils.PasswordUtils;
 import jakarta.persistence.*;
 import jakarta.validation.ValidationException;
 import org.hibernate.annotations.CreationTimestamp;

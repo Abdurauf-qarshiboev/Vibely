@@ -1,7 +1,7 @@
-package com.webdev.project.backend.authentication.filters;
+package com.webdev.project.backend.filters;
 
-import com.webdev.project.backend.authentication.services.CustomUserDetailsService;
-import com.webdev.project.backend.authentication.utils.JwtUtils;
+import com.webdev.project.backend.services.CustomUserDetailsService;
+import com.webdev.project.backend.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

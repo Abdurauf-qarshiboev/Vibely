@@ -1,8 +1,8 @@
-package com.webdev.project.backend.authentication.controllers;
+package com.webdev.project.backend.controllers;
 
-import com.webdev.project.backend.authentication.services.CustomUserDetailsService;
-import com.webdev.project.backend.authentication.utils.JwtUtils;
-import com.webdev.project.backend.authentication.requests.LoginRequest;
+import com.webdev.project.backend.services.CustomUserDetailsService;
+import com.webdev.project.backend.utils.JwtUtils;
+import com.webdev.project.backend.requests.LoginRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
