@@ -1,7 +1,7 @@
-package com.webdev.project.backend.authentication.controllers;
+package com.webdev.project.backend.controllers;
 
-import com.webdev.project.backend.authentication.entities.User;
-import com.webdev.project.backend.authentication.services.UserService;
+import com.webdev.project.backend.entities.User;
+import com.webdev.project.backend.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

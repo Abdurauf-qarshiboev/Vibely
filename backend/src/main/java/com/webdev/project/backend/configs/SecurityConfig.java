@@ -1,7 +1,7 @@
-package com.webdev.project.backend.authentication.configs;
+package com.webdev.project.backend.configs;
 
-import com.webdev.project.backend.authentication.filters.JwtAuthenticationFilter;
-import com.webdev.project.backend.authentication.services.CustomUserDetailsService;
+import com.webdev.project.backend.filters.JwtAuthenticationFilter;
+import com.webdev.project.backend.services.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;

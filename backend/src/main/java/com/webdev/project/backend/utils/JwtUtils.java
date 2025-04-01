@@ -1,4 +1,4 @@
-package com.webdev.project.backend.authentication.utils;
+package com.webdev.project.backend.utils;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;

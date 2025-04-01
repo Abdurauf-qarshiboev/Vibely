@@ -1,7 +1,5 @@
 package com.webdev.project.backend;
 
-import com.webdev.project.backend.authentication.repositories.UserRepository;
-import com.webdev.project.backend.authentication.services.UserService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.GetMapping;

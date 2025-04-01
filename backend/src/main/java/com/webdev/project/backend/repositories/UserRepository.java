@@ -1,6 +1,6 @@
-package com.webdev.project.backend.authentication.repositories;
+package com.webdev.project.backend.repositories;
 
-import com.webdev.project.backend.authentication.entities.User;
+import com.webdev.project.backend.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
