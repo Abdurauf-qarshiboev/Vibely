@@ -32,7 +32,6 @@ public class CommentController {
         this.userService = userService;
     }
 
-    // Create a new comment on a post
     @PostMapping("/{postId}/{username}")
     public ResponseEntity<Comment> createComment(@PathVariable Long postId, @PathVariable String username,
                                                  @Valid @RequestBody Comment comment) {
@@ -47,13 +46,11 @@ public class CommentController {
         return new ResponseEntity<>(createdComment, HttpStatus.CREATED);
     }
 
-    // Get all comments for a post
     @GetMapping("/{postId}")
     public ResponseEntity<List<Comment>> getCommentsByPost(@PathVariable Long postId) {
         return ResponseEntity.ok(commentService.getCommentsByPostId(postId));
     }
 
-    // Delete a comment by ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
         commentService.deleteComment(id);

@@ -2,7 +2,6 @@ package com.webdev.project.backend.entities;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
-
 import java.sql.Timestamp;
 import java.util.List;
 

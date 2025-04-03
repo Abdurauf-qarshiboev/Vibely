@@ -28,7 +28,6 @@ public class PostController {
         this.userService = userService;
     }
 
-    // Create a new post
     @PostMapping("/{username}")
     public ResponseEntity<Post> createPost(@PathVariable String username, @Valid @RequestBody Post post) {
         Optional<User> user = userService.findByUsername(username);
@@ -39,13 +38,11 @@ public class PostController {
         return new ResponseEntity<>(createdPost, HttpStatus.CREATED);
     }
 
-    // Get all posts
     @GetMapping
     public ResponseEntity<List<Post>> getAllPosts() {
         return ResponseEntity.ok(postService.getAllPosts());
     }
 
-    // Get post by ID
     @GetMapping("/{id}")
     public ResponseEntity<Post> getPostById(@PathVariable Long id) {
         Optional<Post> post = postService.getPostById(id);
@@ -53,7 +50,6 @@ public class PostController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    // Delete a post by ID
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePost(@PathVariable Long id) {
         postService.deletePost(id);
