@@ -8,7 +8,6 @@ import com.webdev.project.backend.requests.CreatePostRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -29,13 +28,8 @@ public class PostService {
         post.setUser(currentUser);
         post.setTitle(request.getTitle());
         post.setBody(request.getBody());
-        post.setIsPrivate(Boolean.TRUE.equals(request.getIsPrivate()));
+        post.setPrivate(Boolean.TRUE.equals(request.getPrivate()));
 
-//TODO        if(imageFile != null && imageFile.isEmpty()){
-            /*String imageUrl = uploadImage(imageFile);
-            post.setImage(imageUrl);*/
-       //TODO }
-       //TODO post.setHashtags(parseHashtags(request.getHashtags()));
         return postRepository.save(post);
     }
 
@@ -56,7 +50,7 @@ public class PostService {
 
         Post post = optionalPost.get();
 
-        if (post.getIsPrivate()) {
+        if (post.getPrivate()) {
             boolean isOwner = post.getUser().getId().equals(currentUser.getId());
 
             // Uncomment when follow logic is implemented
@@ -86,7 +80,7 @@ public class PostService {
         existingPost.setTitle(updatedData.getTitle());
         existingPost.setBody(updatedData.getBody());
         existingPost.setImage(updatedData.getImage());
-        existingPost.setIsPrivate(updatedData.getIsPrivate());
+        existingPost.setPrivate(updatedData.getPrivate());
         // existingPost.setHashtags(updatedData.getHashtags());
 
         Post saved = postRepository.save(existingPost);
@@ -94,28 +88,36 @@ public class PostService {
     }
 
     public List<Post> getPostsByUser(User user) {
-        return postRepository.findByUser(user);
+        // TODO: Implement allowing private posts only when a user accepted follow from that user (1)
+        return postRepository.findByUserAndIsPrivateFalse(user);
     }
 
-    public void deletePost(Long postId, User currentUser) {
+    public List<Post> getMyPosts(User currentUser) {
+        return postRepository.findByUser(currentUser);
+    }
+
+    public Boolean deletePost(Long postId, User currentUser) {
         Optional<Post> optionalPost = postRepository.findById(postId);
 
         if (optionalPost.isEmpty()) {
-            return;
+            return false;
         }
 
         Post post = optionalPost.get();
 
         if (!post.getUser().getId().equals(currentUser.getId())) {
-            return;
+            return false;
         }
 
         postRepository.delete(post);
+
+        return true;
     }
 
 
     public List<Post> getFeedPosts(User user) {
-        return new ArrayList<>();
+        // TODO: Implement allowing private posts only when a user accepted follow from that user (2)
+        return postRepository.findByUserIsNotAndIsPrivateFalse(user); // Get all public posts that are not from current user
     }
 
 

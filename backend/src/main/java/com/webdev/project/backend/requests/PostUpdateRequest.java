@@ -32,11 +32,11 @@ public class PostUpdateRequest {
         this.body = body;
     }
 
-    public Boolean getIsPrivate() {
+    public Boolean getPrivate() {
         return isPrivate;
     }
 
-    public void setIsPrivate(Boolean isPrivate) {
+    public void setPrivate(Boolean isPrivate) {
         this.isPrivate = isPrivate;
     }
 

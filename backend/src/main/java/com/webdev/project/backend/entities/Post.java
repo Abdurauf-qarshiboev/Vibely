@@ -14,7 +14,6 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // RELATIONSHIP TO USER
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -43,7 +42,6 @@ public class Post {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Constructors
     public Post() {}
 
     public Post(User user, String title, String body, String image, Boolean isPrivate) {
@@ -55,8 +53,6 @@ public class Post {
         this.likeCount = 0;
         this.commentCount = 0;
     }
-
-    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -110,11 +106,11 @@ public class Post {
         this.image = image;
     }
 
-    public Boolean getIsPrivate() {
+    public Boolean getPrivate() {
         return isPrivate;
     }
 
-    public void setIsPrivate(Boolean isPrivate) {
+    public void setPrivate(Boolean isPrivate) {
         this.isPrivate = isPrivate;
     }
 

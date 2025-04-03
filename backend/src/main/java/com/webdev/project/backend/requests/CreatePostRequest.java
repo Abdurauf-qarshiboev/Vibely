@@ -6,16 +6,6 @@ public class CreatePostRequest {
     private Boolean isPrivate;
     private String hashtags;
 
-    public CreatePostRequest() {
-    }
-
-    public CreatePostRequest(String title, String body, Boolean isPrivate, String hashtags) {
-        this.title = title;
-        this.body = body;
-        this.isPrivate = isPrivate;
-        this.hashtags = hashtags;
-    }
-
     public String getTitle() {
         return title;
     }
@@ -32,11 +22,11 @@ public class CreatePostRequest {
         this.body = body;
     }
 
-    public Boolean getIsPrivate() {
+    public Boolean getPrivate() {
         return isPrivate;
     }
 
-    public void setIsPrivate(Boolean isPrivate) {
+    public void setPrivate(Boolean isPrivate) {
         this.isPrivate = isPrivate;
     }
 
