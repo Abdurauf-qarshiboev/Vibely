@@ -1,5 +1,6 @@
 package com.webdev.project.backend.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.sql.Timestamp;
@@ -15,6 +16,7 @@ public class Post {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
     @Column(nullable = false)
@@ -90,5 +92,13 @@ public class Post {
 
     public void addShare() {
         this.shares++;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
     }
 }

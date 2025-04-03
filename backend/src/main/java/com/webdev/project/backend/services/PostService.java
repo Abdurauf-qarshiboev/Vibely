@@ -24,12 +24,20 @@ public class PostService {
         return postRepository.save(post);
     }
 
+    public Post updatePost(Post post) {
+        return postRepository.save(post);
+    }
+
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
 
     public Optional<Post> getPostById(Long id) {
         return postRepository.findById(id);
+    }
+
+    public List<Post> getPostsByUserId(String username) {
+        return postRepository.findByUser_Username(username);
     }
 
     public void deletePost(Long id) {
