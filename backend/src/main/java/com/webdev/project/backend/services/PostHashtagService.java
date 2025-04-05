@@ -35,4 +35,11 @@ public class PostHashtagService {
     public List<PostHashtag> getPostHashtagsByHashtagId(Integer hashtagId) {
         return postHashtagRepository.findByHashtagId(hashtagId);
     }
+
+    public void removePostHashtag(Integer id) {
+        if (!postHashtagRepository.existsById(id)) {
+            throw new RuntimeException("PostHashtag not found");
+        }
+        postHashtagRepository.deleteById(id);
+    }
 }

@@ -27,6 +27,11 @@ public class HashtagService {
         return hashtagRepository.findByName(name);
     }
 
+    public Optional<Hashtag> getHashtagById(Integer id) {
+        return hashtagRepository.findById(id);
+    }
+
+
     public List<Hashtag> getTrendingHashtags(int limit) {
         return hashtagRepository.findAll(PageRequest.of(0, limit)).getContent();
     }
