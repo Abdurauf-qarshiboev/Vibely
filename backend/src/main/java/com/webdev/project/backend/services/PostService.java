@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+
 @Service
 public class PostService {
 
@@ -19,25 +20,16 @@ public class PostService {
         this.postRepository = postRepository;
     }
 
-    public Post createPost(User user, Post postData) {
-        Post post = new Post(user, postData.getTitle(), postData.getContent());
+    public Post createPost(Post post) {
         return postRepository.save(post);
-    }
-
-    public Post updatePost(Post post) {
-        return postRepository.save(post);
-    }
-
-    public List<Post> getAllPosts() {
-        return postRepository.findAll();
     }
 
     public Optional<Post> getPostById(Long id) {
         return postRepository.findById(id);
     }
 
-    public List<Post> getPostsByUserId(String username) {
-        return postRepository.findByUser_Username(username);
+    public List<Post> getPublicPosts() {
+        return postRepository.findByIsPrivateFalse();
     }
 
     public void deletePost(Long id) {
