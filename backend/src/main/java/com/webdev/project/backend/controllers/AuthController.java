@@ -66,7 +66,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody RegistrationRequest registrationRequest) {
+        public ResponseEntity<?> registerUser(@Valid @RequestBody RegistrationRequest registrationRequest) {
         try {
 
             // Create a new User from the registration request
