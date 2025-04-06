@@ -5,14 +5,13 @@ import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
 import com.webdev.project.backend.repositories.FollowRepository;
 import com.webdev.project.backend.repositories.UserRepository;
-import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,16 +33,14 @@ public class FollowService {
 
         // Check if already following
         Optional<Follow> existingFollow = followRepository.findByFollowerAndFollowed(follower, followed);
-
         if (existingFollow.isPresent()) {
-            return null;
+            return existingFollow.get();
         }
 
         // Check if the user to follow is private
         boolean requiresApproval = followed.isPrivate() != null && followed.isPrivate();
 
         Follow follow = new Follow(follower, followed, !requiresApproval);
-
         return followRepository.save(follow);
     }
 
@@ -90,16 +87,12 @@ public class FollowService {
         followRepository.delete(followRequest);
     }
 
-    public Page<Follow> getFollowers(User user, int page, int size) {
-        return followRepository.findByFollowedAndIsApprovedTrue(user, PageRequest.of(page, size));
+    public List<Follow> getFollowers(User user) {
+        return followRepository.findByFollowedAndIsApprovedTrue(user);
     }
 
-    public Page<Follow> getFollowing(User user, int page, int size) {
-        return followRepository.findByFollowerAndIsApprovedTrue(user, PageRequest.of(page, size));
-    }
-
-    public Page<Follow> getFollowRequests(User user, int page, int size) {
-        return followRepository.findByFollowedAndIsApprovedFalse(user, PageRequest.of(page, size));
+    public List<Follow> getFollowing(User user) {
+        return followRepository.findByFollowerAndIsApprovedTrue(user);
     }
 
     public boolean isFollowing(User follower, User followed) {
@@ -107,8 +100,8 @@ public class FollowService {
         return follow.isPresent() && follow.get().getIsApproved();
     }
 
-    public boolean hasPendingFollowRequest(User follower, User followed) {
-        Optional<Follow> follow = followRepository.findByFollowerAndFollowed(follower, followed);
-        return follow.isPresent() && !follow.get().getIsApproved();
+    public List<Follow> getPendingFollowRequests(User user) {
+        return followRepository.findByFollowedAndIsApprovedFalse(user);
     }
+
 }

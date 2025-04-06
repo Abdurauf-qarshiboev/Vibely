@@ -13,11 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+
+import java.util.*;
 
 @RestController
 @RequestMapping("/users")
@@ -97,24 +94,32 @@ public class FollowController {
     @GetMapping("/{username}/followers")
     public ResponseEntity<?> getFollowers(
             @PathVariable String username,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         try {
-            User user = userRepository.findByUsername(username)
+            Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
+            if (currentUserOptional.isEmpty()) {
+                return ResponseUtil.error("FOLLOW_003", "Not authenticated", HttpStatus.CONFLICT);
+            }
+            User currentUser = currentUserOptional.get();
+
+            // Fetch the user whose followers are being requested
+            User targetUser = userRepository.findByUsername(username)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
 
-            // Check if profile is private and not the current user or follower
-            if (Boolean.TRUE.equals(user.isPrivate()) && !user.equals(currentUser) &&
-                    !followService.isFollowing(currentUser, user)) {
+            // Check if the profile is private and access should be restricted
+            if (Boolean.TRUE.equals(targetUser.isPrivate()) &&
+                    !targetUser.getUsername().equals(currentUser.getUsername()) &&
+                    !followService.isFollowing(currentUser, targetUser)) {
                 return ResponseUtil.error("FOLLOW_005", "This profile is private", HttpStatus.FORBIDDEN);
             }
 
-            Page<Follow> followers = followService.getFollowers(user, page - 1, limit);
+            // Fetch followers
+            List<Follow> followers = followService.getFollowers(targetUser);
 
-            List<Map<String, Object>> followersList = new java.util.ArrayList<>();
-            for (Follow follow : followers.getContent()) {
+            // Map followers into a response format
+            List<Map<String, Object>> followersList = new ArrayList<>();
+            for (Follow follow : followers) {
                 User follower = follow.getFollower();
                 Map<String, Object> followerMap = new HashMap<>();
                 followerMap.put("id", follower.getId());
@@ -122,16 +127,14 @@ public class FollowController {
                 followerMap.put("firstName", follower.getFirstName());
                 followerMap.put("avatar", follower.getAvatar());
                 followerMap.put("verified", follower.isVerified());
-                followerMap.put("following_you", followService.isFollowing(follower, currentUser));
+                followerMap.put("following_you", followService.isFollowing(currentUser, follower));
                 followersList.add(followerMap);
             }
 
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("followers", followersList);
 
-
-            ResponseEntity<Map<String, Object>> originalResponse = new ResponseEntity<>(responseData, HttpStatus.OK);
-            return ResponseUtil.success(originalResponse, "Followers retrieved");
+            return ResponseUtil.success(new ResponseEntity<>(responseData, HttpStatus.OK), "Followers retrieved");
 
         } catch (ResourceNotFoundException e) {
             return ResponseUtil.error("FOLLOW_006", e.getMessage(), HttpStatus.NOT_FOUND);
@@ -140,16 +143,18 @@ public class FollowController {
         }
     }
 
+
     @GetMapping("/{username}/following")
     public ResponseEntity<?> getFollowing(
             @PathVariable String username,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         try {
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+
+            User currentUser = userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
             // Check if profile is private and not the current user or follower
             if (Boolean.TRUE.equals(user.isPrivate()) && !user.equals(currentUser) &&
@@ -157,10 +162,10 @@ public class FollowController {
                 return ResponseUtil.error("FOLLOW_008", "This profile is private", HttpStatus.FORBIDDEN);
             }
 
-            Page<Follow> following = followService.getFollowing(user, page - 1, limit);
+            List<Follow> following = followService.getFollowing(user);
 
-            List<Map<String, Object>> followingList = new java.util.ArrayList<>();
-            for (Follow follow : following.getContent()) {
+            List<Map<String, Object>> followingList = new ArrayList<>();
+            for (Follow follow : following) {
                 User followed = follow.getFollowed();
                 Map<String, Object> followedMap = new HashMap<>();
                 followedMap.put("id", followed.getId());
@@ -175,8 +180,7 @@ public class FollowController {
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("following", followingList);
 
-            ResponseEntity<Map<String, Object>> originalResponse = new ResponseEntity<>(responseData, HttpStatus.OK);
-            return ResponseUtil.success(originalResponse, "Following retrieved");
+            return ResponseUtil.success(new ResponseEntity<>(responseData, HttpStatus.OK), "Following retrieved");
 
         } catch (ResourceNotFoundException e) {
             return ResponseUtil.error("FOLLOW_009", e.getMessage(), HttpStatus.NOT_FOUND);
@@ -186,16 +190,16 @@ public class FollowController {
     }
 
     @GetMapping("/follow-requests")
-    public ResponseEntity<?> getFollowRequests(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit,
-            @AuthenticationPrincipal User currentUser) {
-
+    public ResponseEntity<?> getFollowRequests(@AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Page<Follow> requests = followService.getFollowRequests(currentUser, page - 1, limit);
+            User currentUser = userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-            List<Map<String, Object>> requestsList = new java.util.ArrayList<>();
-            for (Follow follow : requests.getContent()) {
+            // Fetch follow requests (not approved yet)
+            List<Follow> requests = followService.getPendingFollowRequests(currentUser);
+
+            List<Map<String, Object>> requestsList = new ArrayList<>();
+            for (Follow follow : requests) {
                 User follower = follow.getFollower();
                 Map<String, Object> followerMap = new HashMap<>();
                 followerMap.put("id", follower.getId());
@@ -209,24 +213,30 @@ public class FollowController {
 
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("requests", requestsList);
-
-            ResponseEntity<Map<String, Object>> originalResponse = new ResponseEntity<>(responseData, HttpStatus.OK);
-            return ResponseUtil.success(originalResponse, "Follow requests retrieved");
+            return ResponseUtil.success(new ResponseEntity<>(responseData, HttpStatus.OK), "Follow requests retrieved");
 
         } catch (Exception e) {
             return ResponseUtil.error("FOLLOW_011", "Failed to retrieve follow requests", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
+
     @PostMapping("/follow-requests/{id}/approve")
     public ResponseEntity<?> approveFollowRequest(
             @PathVariable Long id,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         try {
+            // Extract username from UserDetails
+            String username = userDetails.getUsername();
+
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
             followService.approveFollowRequest(currentUser, id);
             ResponseEntity<Object> originalResponse = new ResponseEntity<>(null, HttpStatus.OK);
             return ResponseUtil.success(originalResponse, "Follow request approved");
+
         } catch (ResourceNotFoundException e) {
             return ResponseUtil.error("FOLLOW_012", e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (IllegalArgumentException e) {
@@ -236,15 +246,23 @@ public class FollowController {
         }
     }
 
+
     @DeleteMapping("/follow-requests/{id}/reject")
     public ResponseEntity<?> rejectFollowRequest(
             @PathVariable Long id,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         try {
+            String username = userDetails.getUsername();
+
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
             followService.rejectFollowRequest(currentUser, id);
+
             ResponseEntity<Object> originalResponse = new ResponseEntity<>(null, HttpStatus.OK);
             return ResponseUtil.success(originalResponse, "Follow request rejected");
+
         } catch (ResourceNotFoundException e) {
             return ResponseUtil.error("FOLLOW_015", e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (IllegalArgumentException e) {
@@ -253,4 +271,5 @@ public class FollowController {
             return ResponseUtil.error("FOLLOW_017", "Failed to reject follow request", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 }
