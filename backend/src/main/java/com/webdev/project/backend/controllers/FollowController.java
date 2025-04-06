@@ -11,10 +11,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,14 +35,20 @@ public class FollowController {
     @PostMapping("/{username}/follow")
     public ResponseEntity<?> followUser(
             @PathVariable String username,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        System.out.println("=== FOLLOW REQUEST RECEIVED ===");
-        System.out.println("Current User: " + (currentUser != null ? currentUser.getUsername() : "null"));
-        System.out.println("Target Username: " + username);
+        Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
+
+        if (currentUserOptional.isEmpty()) {
+            return ResponseUtil.error("FOLLOW_002X", "Not authenticated", HttpStatus.CONFLICT);
+        }
 
         try {
-            Follow follow = followService.followUser(currentUser, username);
+            Follow follow = followService.followUser(currentUserOptional.get(), username);
+
+            if (follow == null) {
+                return ResponseUtil.error("FOLLOW_002L", "Already followed", HttpStatus.CONFLICT);
+            }
 
             Map<String, String> statusData = new HashMap<>();
             String message;
@@ -57,10 +65,8 @@ public class FollowController {
             return ResponseUtil.success(originalResponse, message);
 
         } catch (ResourceNotFoundException e) {
-            e.printStackTrace();
             return ResponseUtil.error("FOLLOW_001", e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseUtil.error("FOLLOW_002", "Failed to follow user", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -69,10 +75,16 @@ public class FollowController {
     @DeleteMapping("/{username}/unfollow")
     public ResponseEntity<?> unfollowUser(
             @PathVariable String username,
-            @AuthenticationPrincipal User currentUser) {
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
+
+        if (currentUserOptional.isEmpty()) {
+            return ResponseUtil.error("FOLLOW_003", "Not authenticated", HttpStatus.CONFLICT);
+        }
 
         try {
-            followService.unfollowUser(currentUser, username);
+            followService.unfollowUser(currentUserOptional.get(), username);
             ResponseEntity<Object> originalResponse = new ResponseEntity<>(null, HttpStatus.OK);
             return ResponseUtil.success(originalResponse, "User unfollowed successfully");
         } catch (ResourceNotFoundException e) {
