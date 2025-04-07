@@ -4,6 +4,7 @@ import com.webdev.project.backend.dto.UserDTO;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.enums.UserRole;
 import com.webdev.project.backend.repositories.UserRepository;
+import com.webdev.project.backend.requests.RegistrationRequest;
 import com.webdev.project.backend.services.CustomUserDetailsService;
 import com.webdev.project.backend.utils.JwtUtils;
 import com.webdev.project.backend.requests.LoginRequest;
@@ -66,9 +67,26 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegistrationRequest registrationRequest) {
         try {
-            user.setRole(UserRole.USER); // Users can't sign in as ADMIN
+
+            // Create a new User from the registration request
+            User user = new User();
+            user.setUsername(registrationRequest.getUsername());
+            user.setPassword(registrationRequest.getPassword());
+            user.setFirstName(registrationRequest.getFirstName());
+            user.setLastName(registrationRequest.getLastName());
+            user.setEmail(registrationRequest.getEmail());
+            user.setPhone(registrationRequest.getPhone());
+            user.setBio(registrationRequest.getBio());
+            user.setAvatar(registrationRequest.getAvatar());
+
+            // Set default values for new users
+            user.setRole(UserRole.USER);
+            user.setPrivate(false);
+            user.setVerified(false);
+
+            // Create the user in DB
             User createdUser = userService.createUser(user);
 
             return ResponseUtil.success(
@@ -79,7 +97,7 @@ public class AuthController {
         } catch (BadCredentialsException e) {
             return ResponseUtil.error("REG_002", "Invalid credentials", HttpStatus.UNAUTHORIZED);
         } catch (Exception e) {
-            return ResponseUtil.error("REG_002", "Registration failed", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseUtil.error("REG_001", "Registration failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

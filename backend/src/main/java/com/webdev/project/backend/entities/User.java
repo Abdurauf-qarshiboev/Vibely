@@ -23,17 +23,26 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
     private String firstName;
     private String lastName;
+    private String bio;
+
+    private String avatar;
 
     @Column(nullable = false, unique = true)
     private String email;
     @Column(nullable = false, unique = true)
     private String phone;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition="VARCHAR(20) DEFAULT 'USER'")
     @Enumerated(EnumType.STRING)
     private UserRole role;
+
+    @Column(columnDefinition="BOOLEAN DEFAULT false")
+    private Boolean is_private;
+    @Column(columnDefinition="BOOLEAN DEFAULT false")
+    private Boolean is_verified;
 
     @CreationTimestamp
     private Timestamp created_at;
@@ -124,5 +133,37 @@ public class User {
 
     public Timestamp getCreated_at() {
         return created_at;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    public Boolean isPrivate() {
+        return is_private;
+    }
+
+    public void setPrivate(Boolean is_private) {
+        this.is_private = is_private;
+    }
+
+    public Boolean isVerified() {
+        return is_verified;
+    }
+
+    public void setVerified(Boolean is_verified) {
+        this.is_verified = is_verified;
     }
 }
