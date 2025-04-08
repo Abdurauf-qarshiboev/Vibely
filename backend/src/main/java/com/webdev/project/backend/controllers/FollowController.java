@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class FollowController {
 
     private final FollowService followService;
@@ -40,7 +40,7 @@ public class FollowController {
         Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
 
         if (currentUserOptional.isEmpty()) {
-            return ResponseUtil.error("FOLLOW_002X", "Not authenticated", HttpStatus.CONFLICT);
+            return ResponseUtil.error("FOLLOW_002X", "Not authenticated", HttpStatus.UNAUTHORIZED);
         }
 
         try {

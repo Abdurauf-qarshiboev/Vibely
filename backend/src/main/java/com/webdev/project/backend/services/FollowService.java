@@ -39,7 +39,7 @@ public class FollowService {
         // Check if the user to follow is private
         boolean requiresApproval = followed.isPrivate() != null && followed.isPrivate();
 
-        Follow follow = new Follow(follower, followed, requiresApproval);
+        Follow follow = new Follow(follower, followed, !requiresApproval);
         return followRepository.save(follow);
     }
 
