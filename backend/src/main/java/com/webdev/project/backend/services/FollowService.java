@@ -6,8 +6,6 @@ import com.webdev.project.backend.exceptions.ResourceNotFoundException;
 import com.webdev.project.backend.repositories.FollowRepository;
 import com.webdev.project.backend.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,14 +31,15 @@ public class FollowService {
 
         // Check if already following
         Optional<Follow> existingFollow = followRepository.findByFollowerAndFollowed(follower, followed);
+
         if (existingFollow.isPresent()) {
-            return existingFollow.get();
+            return null;
         }
 
         // Check if the user to follow is private
         boolean requiresApproval = followed.isPrivate() != null && followed.isPrivate();
 
-        Follow follow = new Follow(follower, followed, !requiresApproval);
+        Follow follow = new Follow(follower, followed, requiresApproval);
         return followRepository.save(follow);
     }
 
@@ -76,6 +75,7 @@ public class FollowService {
 
     @Transactional
     public void rejectFollowRequest(User user, Long requestId) {
+
         Follow followRequest = followRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Follow request not found with id: " + requestId));
 
@@ -96,8 +96,8 @@ public class FollowService {
     }
 
     public boolean isFollowing(User follower, User followed) {
-        Optional<Follow> follow = followRepository.findByFollowerAndFollowed(follower, followed);
-        return follow.isPresent() && follow.get().getIsApproved();
+        Optional<Follow> follow = followRepository.findByFollowerAndFollowedAndIsApproved(follower, followed, Boolean.TRUE);
+        return follow.isPresent();
     }
 
     public List<Follow> getPendingFollowRequests(User user) {
