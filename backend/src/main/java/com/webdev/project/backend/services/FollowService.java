@@ -5,9 +5,11 @@ import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
 import com.webdev.project.backend.repositories.FollowRepository;
 import com.webdev.project.backend.repositories.UserRepository;
+import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +34,16 @@ public class FollowService {
 
         // Check if already following
         Optional<Follow> existingFollow = followRepository.findByFollowerAndFollowed(follower, followed);
+
         if (existingFollow.isPresent()) {
-            return existingFollow.get();
+            return null;
         }
 
         // Check if the user to follow is private
         boolean requiresApproval = followed.isPrivate() != null && followed.isPrivate();
 
         Follow follow = new Follow(follower, followed, !requiresApproval);
+
         return followRepository.save(follow);
     }
 
