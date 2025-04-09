@@ -1,4 +1,3 @@
-// Create a dedicated DTO for registration
 package com.webdev.project.backend.requests;
 
 import jakarta.validation.constraints.Email;
