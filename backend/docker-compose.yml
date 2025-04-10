@@ -1,0 +1,52 @@
+services:
+  # Spring Boot Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web-project2-app
+    ports:
+      - "8085:8085"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=project2_db
+      - DB_USER=postgres
+      - DB_PASS=1649
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_SECURITY_USER_NAME=admin
+      - SPRING_SECURITY_USER_PASSWORD=0000
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:latest
+    container_name: web-project2-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=project2_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1649
+    volumes:
+      - postgres-data:/var/lib/postgresql_project2/data
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d project2_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
