@@ -5,15 +5,10 @@ import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.repositories.PostRepository;
 import com.webdev.project.backend.repositories.UserRepository;
 import com.webdev.project.backend.requests.CreatePostRequest;
-import com.webdev.project.backend.requests.UpdatePostRequest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.AccessDeniedException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -68,7 +63,7 @@ public class PostService {
             // boolean isFollowing = followRepository.isFollowing(currentUser.getId(), post.getUser().getId());
 
             if (!isOwner /* && !isFollowing */) {
-                return Optional.ofNullable(null); // treat as not visible
+                return Optional.empty(); // treat as not visible
             }
         }
 
@@ -98,32 +93,42 @@ public class PostService {
         return Optional.of(saved);
     }
 
+    public List<Post> getPostsByUser(User user) {
+        return postRepository.findByUser(user);
+    }
 
-    public boolean deletePost(Long postId, User currentUser) {
+    public void deletePost(Long postId, User currentUser) {
         Optional<Post> optionalPost = postRepository.findById(postId);
 
         if (optionalPost.isEmpty()) {
-            return false;
+            return;
         }
 
         Post post = optionalPost.get();
 
         if (!post.getUser().getId().equals(currentUser.getId())) {
-            return false;
+            return;
         }
 
         postRepository.delete(post);
-        return true;
     }
 
 
-   /* public List<Post> getFeedPosts(User currentUser, int page, int size) {
-        // TODO: Implement
-    }*/
+    public List<Post> getFeedPosts(User user) {
+        return new ArrayList<>();
+    }
 
-    public Page<Post> searchPosts(String query, int page, int limit) {
-        Pageable pageable = PageRequest.of(page, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return postRepository.searchPublicPosts(query.toLowerCase(), pageable);
+
+    public List<Post> searchPosts(String query, String hashtag) {
+        if (hashtag != null && !hashtag.isBlank()) {
+            if (query != null && !query.isBlank()) {
+                return postRepository.searchPublicPosts(query.toLowerCase());
+            } else {
+                return postRepository.searchPublicPosts(hashtag.toLowerCase());
+            }
+        }
+
+        return postRepository.searchPublicPosts(query == null ? "" : query.toLowerCase());
     }
 
 }
