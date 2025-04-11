@@ -18,4 +18,6 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
     List<Follow> findByFollowerAndIsApprovedTrue(User follower);
 
     List<Follow> findByFollowedAndIsApprovedFalse(User followed);
+
+    Optional<Follow> findByFollowerAndFollowedAndIsApproved(User follower, User followed, Boolean isApproved);
 }

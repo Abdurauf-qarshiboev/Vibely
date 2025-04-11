@@ -7,7 +7,6 @@ import com.webdev.project.backend.repositories.UserRepository;
 import com.webdev.project.backend.services.FollowService;
 import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,6 +32,10 @@ public class FollowController {
     public ResponseEntity<?> followUser(
             @PathVariable String username,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails.getUsername().equals(username)) {
+            return ResponseUtil.error("FOLLOW_002H", "Can't follow yourself", HttpStatus.CONFLICT);
+        }
 
         Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
 
@@ -199,10 +202,11 @@ public class FollowController {
             List<Follow> requests = followService.getPendingFollowRequests(currentUser);
 
             List<Map<String, Object>> requestsList = new ArrayList<>();
+
             for (Follow follow : requests) {
                 User follower = follow.getFollower();
                 Map<String, Object> followerMap = new HashMap<>();
-                followerMap.put("id", follower.getId());
+                followerMap.put("request_id", follow.getId());
                 followerMap.put("username", follower.getUsername());
                 followerMap.put("firstName", follower.getFirstName());
                 followerMap.put("avatar", follower.getAvatar());
