@@ -23,7 +23,7 @@ public class PostDTO {
         this.likeCount = post.getLikeCount();
         this.commentCount = post.getCommentCount();
         this.image = post.getImage();
-        this.isPrivate = post.getIsPrivate();
+        this.isPrivate = post.getPrivate();
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
     }
@@ -35,7 +35,7 @@ public class PostDTO {
     public Integer getLikeCount() { return likeCount; }
     public Integer getCommentCount() { return commentCount; }
     public String getImage() { return image; }
-    public Boolean getIsPrivate() { return isPrivate; }
+    public Boolean getPrivate() { return isPrivate; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }
