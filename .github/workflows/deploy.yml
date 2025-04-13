@@ -1,0 +1,27 @@
+name: Deploy Spring Boot API
+
+on:
+  push:
+    branches:
+      - backend  # Trigger deploy on push to 'backend' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo (not strictly needed, just standard)
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: root
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd webdev_project2
+            git pull origin backend
+            cd backend
+            docker-compose down
+            docker-compose up --build -d
