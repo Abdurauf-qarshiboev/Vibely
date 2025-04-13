@@ -24,10 +24,10 @@ public class Post {
     private String body;
 
     @Column(name = "like_count")
-    private Integer likeCount;
+    private Integer likeCount = 0;
 
     @Column(name = "comment_count")
-    private Integer commentCount;
+    private Integer commentCount = 0;
 
     private String image;
 

@@ -4,8 +4,7 @@ import com.webdev.project.backend.responses.ErrorResponse;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 
-public class
-ResponseUtil {
+public class ResponseUtil {
 
     // Success response formatter
     public static <T> ResponseEntity<ResponseFormatter<T>> success(ResponseEntity<T> originalResponse, String message) {
