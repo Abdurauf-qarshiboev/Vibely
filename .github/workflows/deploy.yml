@@ -23,5 +23,5 @@ jobs:
             cd webdev_project2
             git pull origin backend
             cd backend
-            docker-compose down
+            docker-compose down --volumes=false
             docker-compose up --build -d
