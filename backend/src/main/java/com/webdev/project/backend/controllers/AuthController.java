@@ -5,6 +5,7 @@ import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.enums.UserRole;
 import com.webdev.project.backend.repositories.UserRepository;
 import com.webdev.project.backend.requests.RegistrationRequest;
+import com.webdev.project.backend.responses.LoginSuccessResponse;
 import com.webdev.project.backend.services.CustomUserDetailsService;
 import com.webdev.project.backend.utils.JwtUtils;
 import com.webdev.project.backend.requests.LoginRequest;
@@ -21,6 +22,7 @@ import com.webdev.project.backend.services.UserService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,12 +32,14 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final CustomUserDetailsService userDetailsService;
     private final UserService userService;
+    private final UserRepository userRepository;
 
     public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, CustomUserDetailsService userDetailsService, UserService userService, UserRepository userRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/login")
@@ -50,11 +54,15 @@ public class AuthController {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getUsername());
             String token = jwtUtils.generateToken(userDetails.getUsername());
+            Optional<User> userOptional = userRepository.findByUsername(userDetails.getUsername());
 
-            Map<String, String> tokenMap = new HashMap<>();
-            tokenMap.put("token", token);
+            if (userOptional.isEmpty()) {
+                return ResponseUtil.error("AUTH_001", "Invalid username or password", HttpStatus.UNAUTHORIZED);
+            }
 
-            ResponseEntity<Map<String, String>> originalResponse = new ResponseEntity<>(tokenMap, HttpStatus.OK);
+            LoginSuccessResponse response = new LoginSuccessResponse(token, new UserDTO(userOptional.get()));
+
+            ResponseEntity<LoginSuccessResponse> originalResponse = new ResponseEntity<>(response, HttpStatus.OK);
 
             return ResponseUtil.success(originalResponse, "Login successful");
 
