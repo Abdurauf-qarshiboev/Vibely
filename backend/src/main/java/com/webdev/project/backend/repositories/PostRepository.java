@@ -14,6 +14,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findByUserAndIsPrivateFalse(User user);
 
 
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.hashtags h WHERE LOWER(h.name) = LOWER(:name) AND p.isPrivate = false")
+    List<Post> findPublicPostsByHashtagName(@Param("name") String name);
+
+
     @Query("SELECT p FROM Post p WHERE p.isPrivate = false AND " +
             "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(p.body) LIKE LOWER(CONCAT('%', :query, '%')))")

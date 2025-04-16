@@ -1,7 +1,10 @@
 package com.webdev.project.backend.dto;
 
+import com.webdev.project.backend.entities.Hashtag;
 import com.webdev.project.backend.entities.Post;
+
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class PostDTO {
     private final Long id;
@@ -14,6 +17,7 @@ public class PostDTO {
     private final Boolean isPrivate;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
+    private final List<String> hashtags;
 
     public PostDTO(Post post) {
         this.id = post.getId();
@@ -26,6 +30,10 @@ public class PostDTO {
         this.isPrivate = post.getPrivate();
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
+        this.hashtags = post.getHashtags()
+                .stream()
+                .map(Hashtag::getName)
+                .toList();
     }
 
     public Long getId() { return id; }
@@ -38,4 +46,5 @@ public class PostDTO {
     public Boolean getPrivate() { return isPrivate; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public List<String> getHashtags() { return hashtags; }
 }
