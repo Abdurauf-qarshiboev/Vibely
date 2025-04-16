@@ -1,9 +1,11 @@
 import { Outlet } from "react-router-dom";
-export default function DashboardLayout() {
+
+const DashboardLayout = () => {
   return (
-    <div className="p-4">
-      {/* dashboard header, sidebar etc */}
+    <div className="h-screen w-screen flex items-center justify-center">
       <Outlet />
     </div>
   );
-}
+};
+
+export default DashboardLayout;

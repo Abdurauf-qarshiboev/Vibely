@@ -1,87 +1,129 @@
-import React, { useRef } from "react";
-import { useForm } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+"use client";
 
-export default function Login() {
-  const {
-    register,
-    handleSubmit,
-    setFocus,
-    formState: { errors },
-  } = useForm();
+import { useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
+export default function LoginPage() {
+  const [user, setUser] = useState({ login: "", password: "" });
+  const [errors, setErrors] = useState({});
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const passwordInputRef = useRef(null);
 
-  const onSubmit = async (data) => {
-    // Simulate login logic
-    console.log(data);
-    const success = await fakeLogin(data); // Replace with your real logic
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setUser({ ...user, [name]: value });
 
-    if (success) {
-      navigate("/dashboard"); // or wherever
-    } else {
-      alert("Barcha maydonlarni to`ldiring!");
-    }
   };
 
-  const fakeLogin = async ({ login, password }) => {
-    // Simulate a login check
-    return login === "admin" && password === "1234";
-  };
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-  const handleKeyPress = (e, nextInputId) => {
-    if (e.key === "Enter") {
-      setFocus(nextInputId);
+    if (user.login && user.password) {
+      try {
+        await login(user);
+      } catch (error) {
+        console.error("Login failed:", error);
+      }
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl w-[400px] mx-auto">
-      <h1 className="text-center text-xl font-bold mb-4">Tizimga kirish</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label className="block font-medium mb-1">Login</label>
-          <input
-            type="text"
-            {...register("login", { required: "Loginni kiriting!" })}
-            onKeyUp={(e) => handleKeyPress(e, "password")}
-            className="w-full border border-gray-300 rounded px-3 py-2"
-          />
-          {errors.login && (
-            <p className="text-sm text-red-500">{errors.login.message}</p>
-          )}
+    <>
+      <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+          <h2 className="mt-10 text-center text-3xl font-bold leading-9 tracking-tight text-white">
+            Sign in
+          </h2>
         </div>
 
-        <div>
-          <label className="block font-medium mb-1">Password</label>
-          <input
-            id="password"
-            type="password"
-            {...register("password", { required: "Parolni kiriting!" })}
-            className="w-full border border-gray-300 rounded px-3 py-2"
-          />
-          {errors.password && (
-            <p className="text-sm text-red-500">{errors.password.message}</p>
-          )}
+        <div className="mt-14 sm:mx-auto sm:w-full sm:max-w-sm">
+          <form className="space-y-6" onSubmit={handleLogin}>
+            <div>
+              <label
+                htmlFor="login"
+                className="block text-sm font-medium leading-6 text-white"
+              >
+                Username
+              </label>
+              <div className="mt-2">
+                <input
+                  id="login"
+                  name="login"
+                  type="text"
+                  autoComplete="current-username"
+                  value={user.login}
+                  onChange={handleInputChange}
+                  required
+                  className={`block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ${
+                    errors.login ? "ring-red-500" : "ring-white/10"
+                  } focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6`}
+                />
+                {errors.login && (
+                  <p className="mt-1 text-sm text-red-500">{errors.login}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium leading-6 text-white"
+                >
+                  Password
+                </label>
+                <div className="text-sm">
+                  <a
+                    href="#"
+                    className="font-semibold text-indigo-400 hover:text-indigo-300"
+                  >
+                    Forgot password?
+                  </a>
+                </div>
+              </div>
+              <div className="mt-2">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  ref={passwordInputRef}
+                  value={user.password}
+                  onChange={handleInputChange}
+                  autoComplete="current-password"
+                  required
+                  className={`block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ${
+                    errors.password ? "ring-red-500" : "ring-white/10"
+                  } focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6`}
+                />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                className="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              >
+                Sign in
+              </button>
+            </div>
+          </form>
+
+          <p className="mt-10 text-center text-sm text-gray-400">
+            Don't have an account yet?{" "}
+            <Link
+              to="/auth/signup"
+              className="font-semibold leading-6 text-indigo-400 hover:text-indigo-300"
+            >
+              Sign up
+            </Link>
+          </p>
         </div>
-
-        <button
-          type="submit"
-          className="bg-green-500 hover:bg-green-600 text-white w-full py-2 rounded submit-btn"
-        >
-          Kirish
-        </button>
-      </form>
-
-      <p className="text-center text-gray-600 mt-4 text-sm">
-        Akkaunt yo`qmi?{" "}
-        <Link
-          to="/signup"
-          className="font-semibold text-blue-600 hover:text-blue-400"
-        >
-          Ro`yxatdan o`ting
-        </Link>
-      </p>
-    </div>
+      </div>
+    </>
   );
 }

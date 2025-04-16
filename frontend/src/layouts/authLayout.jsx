@@ -1,10 +1,11 @@
-// layouts/AuthLayout.jsx
 import { Outlet } from "react-router-dom";
 
-export default function AuthLayout() {
+const AuthLayout = () => {
   return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="h-screen w-screen flex items-center justify-center">
       <Outlet />
     </div>
   );
-}
+};
+
+export default AuthLayout;
