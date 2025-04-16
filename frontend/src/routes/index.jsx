@@ -49,11 +49,11 @@ const AppRoutes = () => {
     if (currentRoute) {
       document.title = `myBlog | ${currentRoute.meta.title}`;
     } else if (location.pathname.includes("/auth/login")) {
-      document.title = "myBlog | Tizimga kirish";
+      document.title = "KOKOgram | Log in";
     } else if (location.pathname.includes("/auth/signup")) {
-      document.title = "myBlog | Ro`yxatdan o`tish";
+      document.title = "KOKOgram | Sign up";
     } else if (location.pathname.includes("/blogs/")) {
-      document.title = "myBlog | Postni tahrirlash";
+      document.title = "KOKOgram | Post";
     }
   }, [location]);
 

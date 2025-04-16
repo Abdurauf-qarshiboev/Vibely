@@ -13,48 +13,62 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   const signup = async (signupUser) => {
+    const apiUser = {
+      username: signupUser.username,
+      password: signupUser.password,
+      firstName: signupUser.firstName,
+      lastName: signupUser.lastName,
+      email: signupUser.email,
+      phone: signupUser.phone,
+    };
+
+    console.log("Signing up with:", apiUser);
+
     try {
-      const { data } = await api.post("auth/register", signupUser);
-      setUser(signupUser);
+      const { data } = await api.post("auth/register", apiUser);
+      console.log("Signup response:", data);
+
       if (data?.error) {
-        message.warning(
-          "Bunday foydalanuvchi mavjud! Iltimos, boshqa login yozing!"
-        );
+        message.warning(`${data.error?.message || "Registration failed"}`);
       } else {
         message.success(
-          "Muvafaqqiyatli ro`yhatdan o`tdingiz. Tizimga login va parolingiz orqali kirishingiz mumkin."
+          "Successfully registered. You can now login with your credentials."
         );
-        navigate("/login");
+        navigate("/auth/login");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Signup error:", error);
       message.error(
-        "Ro`yxatdan o`tishda xatolik yuz berdi! Iltimos, qayta urinib ko`ring."
+        error?.response?.data?.error?.message ||
+          "Registration failed! Please try again."
       );
     }
   };
 
   const login = async (loginUser) => {
-    console.log(loginUser);
-    // try {
-    //   const { data } = await api.post(`/auth/login`, loginUser);
-    //   if (data) console.log(data);
-    //   sessionStorage.setItem("token", data.token);
-    //   setUser({ ...data.user });
-    //   setIsAuth(true);
-    //   navigate("/home");
-    // } catch (err) {
-    //   console.error(err);
-    //   message.error(err?.response?.data.message);
-    // }
+    console.log("Logging in with:", loginUser);
+    try {
+      const { data } = await api.post(`auth/login`, loginUser);
+      if (data) console.log("Login response:", data);
+      sessionStorage.setItem("token", data.data.token);
+      setUser({ ...data.data.user });
+      setIsAuth(true);
+      message.success("Login successful!");
+      navigate("/");
+    } catch (err) {
+      console.error("Login error:", err);
+      message.error(
+        err?.response?.data?.error?.message || "Invalid username or password"
+      );
+    }
   };
 
   const logout = () => {
     setUser({});
     setIsAuth(false);
     sessionStorage.removeItem("token");
-    navigate("/login");
-    message.success("Tizimdan muvaffaqiyatli chiqdingiz!");
+    navigate("/auth/login");
+    message.success("Successfully logged out!");
   };
 
   const checkUser = async () => {
@@ -73,10 +87,10 @@ export const AuthProvider = ({ children }) => {
       const userId = user._id;
       const { data } = await api.put(`auth/update/${userId}`, updatedUser);
       setUser({ ...data });
-      message.success("Foydalanuvchi muvaffaqiyatli yangilandi!");
+      message.success("User updated successfully!");
     } catch (error) {
       console.error(error);
-      message.error("Foydalanuvchini yangilashda xatolik yuz berdi!");
+      message.error("Failed to update user!");
     }
   };
 

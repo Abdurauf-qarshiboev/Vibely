@@ -17,7 +17,7 @@ export const mainMenu = [
     name: "home",
     component: DashboardPage,
     meta: {
-      title: "Bosh sahifa",
+      title: "Feed",
       icon: HomeIcon,
     },
   },
@@ -26,7 +26,7 @@ export const mainMenu = [
     name: "myblogs",
     component: MyBlogsPage,
     meta: {
-      title: "Mening bloglarim",
+      title: "My posts",
       icon: DocumentDuplicateIcon,
     },
   },
@@ -35,7 +35,7 @@ export const mainMenu = [
     name: "create-blogs",
     component: CreateBlogs,
     meta: {
-      title: "Blog yaratish",
+      title: "Create post",
       icon: PlusCircleIcon,
     },
   },
@@ -47,7 +47,7 @@ export const profile = [
     name: "profile",
     component: ProfilePage,
     meta: {
-      title: "Mening Profilim",
+      title: "Profile",
       icon: UserIcon,
     },
   },

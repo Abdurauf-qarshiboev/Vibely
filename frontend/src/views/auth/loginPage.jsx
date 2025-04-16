@@ -2,10 +2,10 @@
 
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
-  const [user, setUser] = useState({ login: "", password: "" });
+  const [user, setUser] = useState({ username: "", password: "" });
   const [errors, setErrors] = useState({});
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -14,54 +14,49 @@ export default function LoginPage() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUser({ ...user, [name]: value });
-
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
-    if (user.login && user.password) {
-      try {
-        await login(user);
-      } catch (error) {
-        console.error("Login failed:", error);
-      }
+    try {
+      await login(user);
+    } catch (error) {
+      console.error("Login failed:", error);
     }
   };
 
   return (
     <>
-      <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+      <div className="flex flex-1 flex-col justify-start px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           <h2 className="mt-10 text-center text-3xl font-bold leading-9 tracking-tight text-white">
             Sign in
           </h2>
         </div>
 
-        <div className="mt-14 sm:mx-auto sm:w-full sm:max-w-sm">
+        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
               <label
-                htmlFor="login"
+                htmlFor="username"
                 className="block text-sm font-medium leading-6 text-white"
               >
                 Username
               </label>
               <div className="mt-2">
                 <input
-                  id="login"
-                  name="login"
+                  id="username"
+                  name="username"
                   type="text"
-                  autoComplete="current-username"
-                  value={user.login}
+                  autoComplete="username"
+                  value={user.username}
                   onChange={handleInputChange}
-                  required
                   className={`block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ${
-                    errors.login ? "ring-red-500" : "ring-white/10"
+                    errors.username ? "ring-red-500" : "ring-white/10"
                   } focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6`}
                 />
-                {errors.login && (
-                  <p className="mt-1 text-sm text-red-500">{errors.login}</p>
+                {errors.username && (
+                  <p className="mt-1 text-sm text-red-500">{errors.username}</p>
                 )}
               </div>
             </div>
@@ -92,7 +87,6 @@ export default function LoginPage() {
                   value={user.password}
                   onChange={handleInputChange}
                   autoComplete="current-password"
-                  required
                   className={`block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ${
                     errors.password ? "ring-red-500" : "ring-white/10"
                   } focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6`}
