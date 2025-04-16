@@ -16,12 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import com.webdev.project.backend.services.UserService;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -105,6 +104,39 @@ public class AuthController {
             return ResponseUtil.error("REG_002", "Invalid credentials", HttpStatus.UNAUTHORIZED);
         } catch (Exception e) {
             return ResponseUtil.error("REG_001", "Registration failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/check-user")
+    public ResponseEntity<?> checkCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            // Check if Authorization header exists and has the right format
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseUtil.error("AUTH_003", "Not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+
+            // Extract the token
+            String token = authHeader.substring(7);
+
+            // Validate token and extract username
+            String username = jwtUtils.extractUsername(token);
+            if (username == null || !jwtUtils.validateToken(token, jwtUtils.extractUsername(token))) {
+                return ResponseUtil.error("AUTH_003", "Invalid or expired token", HttpStatus.UNAUTHORIZED);
+            }
+
+            // Load user details and verify
+            Optional<User> userOptional = userRepository.findByUsername(username);
+            if (userOptional.isEmpty()) {
+                return ResponseUtil.error("AUTH_004", "User not found", HttpStatus.NOT_FOUND);
+            }
+
+            // Create DTO and return response
+            UserDTO userDTO = new UserDTO(userOptional.get());
+            ResponseEntity<UserDTO> originalResponse = new ResponseEntity<>(userDTO, HttpStatus.OK);
+            return ResponseUtil.success(originalResponse, "User authenticated");
+
+        } catch (Exception e) {
+            return ResponseUtil.error("AUTH_005", "Authentication check failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
