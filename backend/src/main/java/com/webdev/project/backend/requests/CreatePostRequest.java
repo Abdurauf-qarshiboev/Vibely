@@ -4,14 +4,15 @@ public class CreatePostRequest {
     private String title;
     private String body;
     private Boolean isPrivate;
-    private String hashtags;
+    private String hashtags; // comma-separated string like: "sunset, travel"
 
+    // Getters and Setters
     public String getTitle() {
         return title;
     }
 
     public void setTitle(String title) {
-        this.title = title;
+        this.title = title != null ? title.trim() : null;
     }
 
     public String getBody() {
@@ -19,22 +20,22 @@ public class CreatePostRequest {
     }
 
     public void setBody(String body) {
-        this.body = body;
+        this.body = body != null ? body.trim() : null;
     }
 
-    public Boolean getPrivate() {
+    public Boolean getIsPrivate() {
         return isPrivate;
     }
 
-    public void setPrivate(Boolean isPrivate) {
+    public void setIsPrivate(Boolean isPrivate) {
         this.isPrivate = isPrivate;
     }
 
     public String getHashtags() {
-        return hashtags;
+        return hashtags != null ? hashtags.trim() : null;
     }
 
     public void setHashtags(String hashtags) {
-        this.hashtags = hashtags;
+        this.hashtags = hashtags != null ? hashtags.trim() : null;
     }
 }
