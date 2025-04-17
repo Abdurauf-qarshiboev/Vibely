@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext, useState } from "react";
 import { api } from "../helpers/api.js";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +10,41 @@ export const AuthProvider = ({ children }) => {
   const [isAuth, setIsAuth] = useState(false);
   const navigate = useNavigate();
 
+  // const signup = async (signupUser) => {
+  //   const apiUser = {
+  //     username: signupUser.username,
+  //     password: signupUser.password,
+  //     firstName: signupUser.firstName,
+  //     lastName: signupUser.lastName,
+  //     email: signupUser.email,
+  //     phone: signupUser.phone,
+  //   };
+
+  //   console.log("Signing up with:", apiUser);
+
+  //   try {
+  //     const { data } = await api.post("auth/register", apiUser);
+  //     console.log("Signup response:", data);
+
+  //     if (data?.error) {
+  //       message.warning(`${data.error?.message || "Registration failed"}`);
+  //     } else {
+  //       message.success(
+  //         "Successfully registered. You can now login with your credentials."
+  //       );
+  //       navigate("/auth/login");
+  //     }
+  //   } catch (error) {
+  //     console.error("Signup error:", error);
+  //     message.error(
+  //       error?.response?.data?.error?.message ||
+  //         "Registration failed! Please try again."
+  //     );
+  //   }
+  // };
+
   const signup = async (signupUser) => {
+    // Format the data exactly as shown in your Postman screenshot
     const apiUser = {
       username: signupUser.username,
       password: signupUser.password,
@@ -20,16 +52,18 @@ export const AuthProvider = ({ children }) => {
       lastName: signupUser.lastName,
       email: signupUser.email,
       phone: signupUser.phone,
+      role: "USER"
     };
 
     console.log("Signing up with:", apiUser);
 
     try {
+
       const { data } = await api.post("auth/register", apiUser);
       console.log("Signup response:", data);
 
       if (data?.error) {
-        message.warning(`${data.error?.message || "Registration failed"}`);
+        message.warning(data.error?.message || "Registration failed");
       } else {
         message.success(
           "Successfully registered. You can now login with your credentials."
@@ -38,20 +72,17 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Signup error:", error);
-      message.error(
-        error?.response?.data?.error?.message ||
-          "Registration failed! Please try again."
-      );
     }
   };
 
   const login = async (loginUser) => {
     console.log("Logging in with:", loginUser);
+    
     try {
       const { data } = await api.post(`auth/login`, loginUser);
       if (data) console.log("Login response:", data);
-      sessionStorage.setItem("token", data.data.token);
-      setUser({ ...data.data.user });
+      sessionStorage.setItem("token", data.data?.token);
+      setUser({ ...data.data?.user });
       setIsAuth(true);
       message.success("Login successful!");
       navigate("/");
@@ -63,13 +94,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser({});
-    setIsAuth(false);
-    sessionStorage.removeItem("token");
-    navigate("/auth/login");
-    message.success("Successfully logged out!");
-  };
+  // const logout = () => {
+  //   setUser({});
+  //   setIsAuth(false);
+  //   sessionStorage.removeItem("token");
+  //   navigate("/auth/login");
+  //   message.success("Successfully logged out!");
+  // };
 
   const checkUser = async () => {
     try {
@@ -101,7 +132,7 @@ export const AuthProvider = ({ children }) => {
         isAuth,
         signup,
         login,
-        logout,
+        // logout,
         checkUser,
         updateUser,
       }}

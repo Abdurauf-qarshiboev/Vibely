@@ -1,5 +1,7 @@
 import axios from "axios";
+
 const URL = "http://159.89.22.150:8085/api";
+
 const api = axios.create({
   baseURL: URL,
   headers: {
@@ -14,7 +16,8 @@ api.interceptors.request.use(
   (config) => {
     config.headers.authorization = `Bearer ${
       sessionStorage.getItem("token") || ""
-    }`;
+      }`;
+    config.headers["Access-Control-Allow-Origin"] = "*";
     return config;
   },
   (error) => {

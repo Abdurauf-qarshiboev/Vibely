@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -245,7 +243,7 @@ export default function SignupPage() {
           Sign up
         </button>
         <p className="text-center text-sm text-gray-400 mt-2">
-          Already have an account{" "}
+          Already have an account?{" "}
           <Link
             to="/auth/login"
             className="font-semibold leading-6 text-indigo-400 hover:text-indigo-300"

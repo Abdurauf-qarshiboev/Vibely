@@ -1,5 +1,3 @@
-"use client";
-
 import { lazy, Suspense, useEffect } from "react";
 import {
   Routes,
@@ -47,7 +45,7 @@ const AppRoutes = () => {
     );
 
     if (currentRoute) {
-      document.title = `myBlog | ${currentRoute.meta.title}`;
+      document.title = `KOKOgram | ${currentRoute.meta.title}`;
     } else if (location.pathname.includes("/auth/login")) {
       document.title = "KOKOgram | Log in";
     } else if (location.pathname.includes("/auth/signup")) {

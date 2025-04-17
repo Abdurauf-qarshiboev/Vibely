@@ -1,10 +1,11 @@
+import React, { useState } from "react";
+
 const DashboardPage = () => {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Bosh sahifa</h1>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <p>Dashboard content goes here</p>
-      </div>
+    <div className="hide-scrollbar">
+      <div className="h-96 grid place-content-center bg-orange-600"> 1 </div>
+      <div className="h-96 grid place-content-center bg-blue-600"> 2 </div>
+      <div className="h-96 grid place-content-center bg-green-600"> 3 </div>
     </div>
   );
 };
