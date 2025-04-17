@@ -39,7 +39,7 @@ public class PostService {
         post.setImage(null); // Image handling can be implemented later
 
         // Process hashtags
-        List<String> parsedHashtags = parseHashtags(request.getHashtags());
+        List<String> parsedHashtags = request.getHashtags();
         Set<Hashtag> hashtagEntities = hashtagService.extractOrCreateHashtags(parsedHashtags);
         post.setHashtags(hashtagEntities);
 
@@ -50,14 +50,6 @@ public class PostService {
         }
 
         return postRepository.save(post);
-    }
-
-    private List<String> parseHashtags(String hashtags) {
-        if (hashtags == null || hashtags.isBlank()) return List.of();
-        return Arrays.stream(hashtags.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
     }
 
     public Optional<Post> getPostById(Long postId, User currentUser) {
