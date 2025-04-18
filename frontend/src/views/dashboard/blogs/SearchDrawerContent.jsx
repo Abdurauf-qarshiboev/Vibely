@@ -14,15 +14,17 @@ const SearchDrawerContent = () => {
   const [users, setUsers] = useState([]);
   const [hashtags, setHashtags] = useState([]);
 
-  // Use the theme context with a force update mechanism
+  // Use the theme context
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
   // Force re-render when theme changes
   const [, forceUpdate] = useState({});
   useEffect(() => {
-    // This will force the component to re-render when theme changes
     forceUpdate({});
+
+    // Apply theme to document element to ensure proper CSS inheritance
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
   // Fetch users and hashtags when component mounts
@@ -36,7 +38,7 @@ const SearchDrawerContent = () => {
           setHashtags(hashtagsResponse.data.data || []);
         }
 
-        // For users, you might need to fetch from a different endpoint
+        // For users
         const usersResponse = await api.get("/users/suggested");
         if (usersResponse.data?.success) {
           setUsers(usersResponse.data.data || []);
@@ -140,12 +142,6 @@ const SearchDrawerContent = () => {
             )
           }
           className="search-input"
-          // Remove background-color from inline style
-          style={{
-            color: isDark ? "#f5f5f5" : "#000",
-            borderColor: isDark ? "#424242" : "#d9d9d9",
-            borderRadius: "0.5rem",
-          }}
           allowClear={{
             clearIcon: (
               <span style={{ color: isDark ? "#a8a8a8" : "#737373" }}>×</span>
@@ -172,12 +168,9 @@ const SearchDrawerContent = () => {
       {searchText.length === 0 && (
         <div className="px-5 py-2">
           <p
-            className="text-base py-2 font-semibold"
-            style={{
-              color: isDark
-                ? "var(--text-primary-dark)"
-                : "var(--text-primary-light)",
-            }}
+            className={`text-base py-2 font-semibold ${
+              isDark ? "text-[#f5f5f5]" : "text-[#000000]"
+            }`}
           >
             Recent searches
           </p>
@@ -209,11 +202,7 @@ const SearchDrawerContent = () => {
             {searchResults.map((user) => (
               <div
                 key={user.id}
-                className={`search-result-item relative flex items-center space-x-3 p-3 shadow-sm ${
-                  isDark
-                    ? "bg-[#121212] border-[#424242]"
-                    : "bg-white border-gray-200"
-                }`}
+                className="search-result-item relative flex items-center space-x-3 p-3 shadow-sm"
               >
                 <div className="flex-shrink-0">
                   <img
@@ -253,8 +242,9 @@ const SearchDrawerContent = () => {
                     </div>
                     {user.email && (
                       <p
-                        className="w-fit whitespace-nowrap mt-0.5 py-0.5 text-xs font-medium"
-                        style={{ color: isDark ? "#4b96ff" : "#00376b" }}
+                        className={`w-fit whitespace-nowrap mt-0.5 py-0.5 text-xs font-medium ${
+                          isDark ? "text-[#4b96ff]" : "text-[#00376b]"
+                        }`}
                       >
                         {user.email}
                       </p>
@@ -270,11 +260,7 @@ const SearchDrawerContent = () => {
             {searchResults.map((hashtag) => (
               <div
                 key={hashtag.id}
-                className={`search-result-item relative flex items-center space-x-3 p-3 shadow-sm ${
-                  isDark
-                    ? "bg-[#121212] border-[#424242]"
-                    : "bg-white border-gray-200"
-                }`}
+                className="search-result-item relative flex items-center space-x-3 p-3 shadow-sm"
               >
                 <div className="flex-shrink-0">
                   <div
@@ -303,8 +289,9 @@ const SearchDrawerContent = () => {
                           #{hashtag.name}
                         </p>
                         <p
-                          className="text-xs"
-                          style={{ color: isDark ? "#a8a8a8" : "#737373" }}
+                          className={`text-xs ${
+                            isDark ? "text-[#a8a8a8]" : "text-[#737373]"
+                          }`}
                         >
                           Added on{" "}
                           {new Date(hashtag.createdAt).toLocaleDateString()}

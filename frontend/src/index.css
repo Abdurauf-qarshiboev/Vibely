@@ -38,6 +38,8 @@ body {
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
+
+/* Layout styles */
 .ant-layout-sider {
   max-width: 240px !important;
   min-width: 240px !important;
@@ -56,6 +58,7 @@ body {
   flex-direction: column !important;
 }
 
+/* Menu item styling */
 .ant-menu-item-selected {
   background-color: none !important;
 }
@@ -85,14 +88,20 @@ body {
   background-color: rgba(0, 0, 0, 0.05) !important;
 }
 
+/* Modal styling */
 .ant-modal-content{
   padding: 0 !important;
 }
 
 [data-theme="dark"] .ant-modal-content{
-  background: #000;
+  background: #262626;
 }
 
+[data-theme="light"] .ant-modal-content{
+  background: #fff;
+}
+
+/* Drawer close button styling */
 [data-theme="dark"] .ant-drawer-close,
 [data-theme="dark"] .ant-drawer-close:hover{
   color: #fff !important;
@@ -108,7 +117,7 @@ body {
 .ant-menu-item,
 .ant-layout,
 .ant-layout-sider,
-.ant-layout-content
+.ant-layout-content,
 .ant-modal {
   transition: all 0.3s ease !important;
 }
@@ -117,12 +126,13 @@ body {
    SEARCH DRAWER SPECIFIC STYLES
    ===================================== */
 
-/* Direct styling for search input with higher specificity */
+/* Search input styling */
 .search-input.ant-input-affix-wrapper {
   border-radius: 0.5rem !important;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease !important;
 }
 
+/* Dark theme input styling */
 [data-theme="dark"] .search-input.ant-input-affix-wrapper {
   background-color: #262626 !important;
   border-color: #424242 !important;
@@ -144,13 +154,21 @@ body {
   color: #a8a8a8 !important;
 }
 
-[data-theme="light"] .search-input .ant-input-affix-wrapper {
-  background-color: #fff !important;
+/* Light theme input styling */
+[data-theme="light"] .search-input.ant-input-affix-wrapper {
+  background-color: #f5f5f5 !important;
   border-color: #d9d9d9 !important;
 }
 
+[data-theme="light"] .search-input.ant-input-affix-wrapper:hover,
+[data-theme="light"] .search-input.ant-input-affix-wrapper:focus,
+[data-theme="light"] .search-input.ant-input-affix-wrapper-focused {
+  border-color: #b0b0b0 !important;
+  box-shadow: none !important;
+}
+
 [data-theme="light"] .search-input.ant-input-affix-wrapper input.ant-input {
-  background-color: #fff !important;
+  background-color: #f5f5f5 !important;
   color: #000 !important;
 }
 
@@ -161,7 +179,7 @@ body {
 /* Tab styling improvements */
 /* Light theme tab styling */
 [data-theme="light"] .ant-tabs-tab {
-  color: #000 !important; /* Lighter gray for inactive tabs */
+  color: #8e8e8e !important; /* Lighter gray for inactive tabs */
   transition: color 0.2s ease;
 }
 
@@ -200,6 +218,7 @@ body {
 }
 
 /* Search drawer styling */
+/* Dark theme drawer styling */
 [data-theme="dark"] .search-drawer .ant-tabs-tab {
   color: #a8a8a8 !important;
 }
@@ -236,33 +255,71 @@ body {
   color: #a8a8a8 !important;
 }
 
+/* Light theme drawer styling */
+[data-theme="light"] .search-drawer .ant-tabs-tab {
+  color: #8e8e8e !important;
+}
+
+[data-theme="light"] .search-drawer .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #000000 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-tabs-ink-bar {
+  background: #000000 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-empty-description {
+  color: #737373 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper:hover,
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper:focus,
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper-focused {
+  border-color: #b0b0b0 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input {
+  background-color: #f5f5f5 !important;
+  color: #000000 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input-clear-icon {
+  color: #737373 !important;
+}
+
 /* Search Result Items - Light Theme */
 [data-theme="light"] .search-result-item {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+  background-color: #ffffff !important;
+  border: 1px solid #e0e0e0 !important;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 [data-theme="light"] .search-result-item:hover {
-  border-color: #c0c0c0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-color: #c0c0c0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Search Result Items - Dark Theme */
 [data-theme="dark"] .search-result-item {
-  background-color: #262626 !important;
+  background-color: #232323 !important;
   border: 1px solid #424242 !important;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 [data-theme="dark"] .search-result-item:hover {
-  border-color: #474747 !important;
-  background-color: #353535 !important;
+  border-color: #535353 !important;
+  background-color: #303030 !important;
 }
 
 /* User and Hashtag item specific styling */
+/* Text colors for dark theme */
 [data-theme="dark"] .search-result-username {
   color: #f5f5f5 !important;
 }
@@ -275,6 +332,20 @@ body {
   color: #f5f5f5 !important;
 }
 
+/* Text colors for light theme */
+[data-theme="light"] .search-result-username {
+  color: #000000 !important;
+}
+
+[data-theme="light"] .search-result-fullname {
+  color: #737373 !important;
+}
+
+[data-theme="light"] .search-result-hashtag {
+  color: #000000 !important;
+}
+
+/* Badge styling */
 [data-theme="dark"] .search-result-count-badge {
   background-color: #262626 !important;
   color: #a8a8a8 !important;
@@ -290,19 +361,42 @@ body {
   transition: background-color 0.3s, color 0.3s, border-color 0.3s !important;
 }
 
-/* Drawer footer in dark mode */
+/* Drawer footer styling */
 [data-theme="dark"] .ant-drawer-footer {
   border-top-color: #424242 !important;
-  background-color: #000 !important;
+  background-color: #262626 !important;
+}
+
+[data-theme="light"] .ant-drawer-footer {
+  border-top-color: #e8e8e8 !important;
+  background-color: #fff !important;
 }
 
 /* Drawer header styling */
 [data-theme="dark"] .ant-drawer-header {
+  background-color: #262626 !important;
   border-bottom-color: #424242 !important;
 }
 
 [data-theme="dark"] .ant-drawer-title {
   color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .ant-drawer-body {
+  background-color: #262626 !important;
+}
+
+[data-theme="light"] .ant-drawer-header {
+  background-color: #fff !important;
+  border-bottom-color: #e8e8e8 !important;
+}
+
+[data-theme="light"] .ant-drawer-title {
+  color: #000 !important;
+}
+
+[data-theme="light"] .ant-drawer-body {
+  background-color: #fff !important;
 }
 
 /* Spin/loader styling */
@@ -314,12 +408,83 @@ body {
   color: #f5f5f5 !important;
 }
 
+[data-theme="light"] .ant-spin-dot i {
+  background-color: #1677ff !important;
+}
+
+[data-theme="light"] .ant-spin-text {
+  color: #000 !important;
+}
+
 /* Empty state styling */
 [data-theme="dark"] .ant-empty-image svg path {
   fill: #424242 !important;
 }
 
+[data-theme="light"] .ant-empty-image svg path {
+  fill: #d9d9d9 !important;
+}
+
 /* Drawer animation */
 .ant-drawer-content-wrapper {
   transition: transform 0.3s ease !important;
+}
+
+/* Drawer content styling */
+.drawer-light .ant-drawer-content {
+  background-color: #fff !important;
+}
+
+.drawer-dark .ant-drawer-content {
+  background-color: #262626 !important;
+}
+
+/* Makes sure theme data attribute is correctly applied to the drawer content */
+.ant-drawer[data-theme="light"] .ant-drawer-content,
+.ant-drawer[data-theme="dark"] .ant-drawer-content {
+  transition: background-color 0.3s ease;
+}
+
+.ant-drawer[data-theme="light"] .ant-drawer-content {
+  background-color: #fff !important;
+}
+
+.ant-drawer[data-theme="dark"] .ant-drawer-content {
+  background-color: #262626 !important;
+}
+
+/* Higher priority theme styles for search drawer */
+div[data-theme="light"].search-drawer {
+  background-color: #fff !important;
+}
+
+div[data-theme="dark"].search-drawer {
+  background-color: #262626 !important;
+}
+
+/* Make sure the drawer wrapper gets the theme */
+.ant-drawer-content-wrapper[data-theme="light"] .ant-drawer-content {
+  background-color: #fff !important;
+}
+
+.ant-drawer-content-wrapper[data-theme="dark"] .ant-drawer-content {
+  background-color: #262626 !important;
+}
+
+/* Fix for drawer backdrop */
+[data-theme="light"] .ant-drawer-mask {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="dark"] .ant-drawer-mask {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Fix email links color */
+div[data-theme="light"] a {
+  color: #00376b !important;
+}
+
+div[data-theme="dark"] a {
+  color: #4b96ff !important;
 }

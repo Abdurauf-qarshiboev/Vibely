@@ -161,14 +161,12 @@ const DashboardLayout = () => {
         title="Search"
         destroyOnClose
         placement="right"
-        width={440}
+        width={400}
         open={drawerOpen}
         onClose={closeDrawer}
         className={isDark ? "drawer-dark" : "drawer-light"}
         data-theme={theme} // Add this attribute explicitly
-        style={{
-          color: isDark ? "#f5f5f5" : "#000",
-        }}
+        // Remove background color inline style
       >
         {loading ? (
           <div
@@ -181,7 +179,8 @@ const DashboardLayout = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <SearchDrawerContent key={theme} /> // Key prop forces re-render on theme change
+          // The key prop forces a complete re-render when theme changes
+          <SearchDrawerContent key={`search-drawer-${theme}`} />
         )}
       </Drawer>
     </div>
