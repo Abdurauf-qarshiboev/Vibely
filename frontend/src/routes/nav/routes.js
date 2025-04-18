@@ -17,7 +17,7 @@ export const mainMenu = [
     name: "home",
     component: DashboardPage,
     meta: {
-      title: "Feed",
+      title: "Home",
       icon: HomeIcon,
     },
   },

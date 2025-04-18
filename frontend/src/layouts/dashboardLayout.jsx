@@ -2,6 +2,7 @@
 
 import { Link, Outlet } from "react-router-dom";
 import { useState, useRef } from "react";
+import SearchDrawerContent from "../views/dashboard/blogs/SearchDrawerContent";
 import {
   HomeOutlined,
   HomeFilled,
@@ -155,17 +156,18 @@ const DashboardLayout = () => {
         </Layout>
       </Layout>
 
-      {/*  Drawer Component */}
+      {/* Search Drawer Component */}
       <Drawer
         title="Search"
         destroyOnClose
         placement="right"
-        width={400}
+        width={440}
         open={drawerOpen}
         onClose={closeDrawer}
+        className={isDark ? "drawer-dark" : "drawer-light"}
+        data-theme={theme} // Add this attribute explicitly
         style={{
-          backgroundColor: `${isDark ? "#262626" : "#fff"}`,
-          color: `${isDark ? "#f5f5f5" : "000"}`,
+          color: isDark ? "#f5f5f5" : "#000",
         }}
       >
         {loading ? (
@@ -179,11 +181,7 @@ const DashboardLayout = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <>
-            <p>Search result 1</p>
-            <p>Search result 2</p>
-            <p>Search result 3</p>
-          </>
+          <SearchDrawerContent key={theme} /> // Key prop forces re-render on theme change
         )}
       </Drawer>
     </div>

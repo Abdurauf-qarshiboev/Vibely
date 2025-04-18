@@ -103,9 +103,6 @@ body {
   color: #262626 !important;
 }
 
-
-
-
 /* Add smooth transitions */
 .ant-menu,
 .ant-menu-item,
@@ -116,4 +113,213 @@ body {
   transition: all 0.3s ease !important;
 }
 
+/* =====================================
+   SEARCH DRAWER SPECIFIC STYLES
+   ===================================== */
 
+/* Direct styling for search input with higher specificity */
+.search-input.ant-input-affix-wrapper {
+  border-radius: 0.5rem !important;
+  transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .search-input.ant-input-affix-wrapper {
+  background-color: #262626 !important;
+  border-color: #424242 !important;
+}
+
+[data-theme="dark"] .search-input.ant-input-affix-wrapper:hover,
+[data-theme="dark"] .search-input.ant-input-affix-wrapper:focus,
+[data-theme="dark"] .search-input.ant-input-affix-wrapper-focused {
+  border-color: #505050 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .search-input.ant-input-affix-wrapper input.ant-input {
+  background-color: #262626 !important;
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-input.ant-input-affix-wrapper input.ant-input::placeholder {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="light"] .search-input .ant-input-affix-wrapper {
+  background-color: #fff !important;
+  border-color: #d9d9d9 !important;
+}
+
+[data-theme="light"] .search-input.ant-input-affix-wrapper input.ant-input {
+  background-color: #fff !important;
+  color: #000 !important;
+}
+
+[data-theme="light"] .search-input.ant-input-affix-wrapper input.ant-input::placeholder {
+  color: #737373 !important;
+}
+
+/* Tab styling improvements */
+/* Light theme tab styling */
+[data-theme="light"] .ant-tabs-tab {
+  color: #000 !important; /* Lighter gray for inactive tabs */
+  transition: color 0.2s ease;
+}
+
+[data-theme="light"] .ant-tabs-tab:hover {
+  color: #555555 !important; /* Slightly darker on hover */
+}
+
+[data-theme="light"] .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #000000 !important; /* Dark for active tab */
+  font-weight: 600;
+}
+
+[data-theme="light"] .ant-tabs-ink-bar {
+  background: #000000 !important; /* Dark underline for active tab */
+  height: 2px !important;
+}
+
+/* Dark theme tab styling refinements */
+[data-theme="dark"] .ant-tabs-tab {
+  color: #8e8e8e !important; /* Medium gray for inactive */
+  transition: color 0.2s ease;
+}
+
+[data-theme="dark"] .ant-tabs-tab:hover {
+  color: #b8b8b8 !important; /* Lighter gray on hover */
+}
+
+[data-theme="dark"] .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #ffffff !important; /* Bright white for active */
+  font-weight: 600;
+}
+
+[data-theme="dark"] .ant-tabs-ink-bar {
+  background: #ffffff !important;
+  height: 2px !important;
+}
+
+/* Search drawer styling */
+[data-theme="dark"] .search-drawer .ant-tabs-tab {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-tabs-ink-bar {
+  background: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-empty-description {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper {
+  background-color: #262626 !important;
+  border-color: #424242 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper:hover,
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper:focus,
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper-focused {
+  border-color: #505050 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input {
+  background-color: #262626 !important;
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input-clear-icon {
+  color: #a8a8a8 !important;
+}
+
+/* Search Result Items - Light Theme */
+[data-theme="light"] .search-result-item {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="light"] .search-result-item:hover {
+  border-color: #c0c0c0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Search Result Items - Dark Theme */
+[data-theme="dark"] .search-result-item {
+  background-color: #262626 !important;
+  border: 1px solid #424242 !important;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .search-result-item:hover {
+  border-color: #474747 !important;
+  background-color: #353535 !important;
+}
+
+/* User and Hashtag item specific styling */
+[data-theme="dark"] .search-result-username {
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-result-fullname {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .search-result-hashtag {
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-result-count-badge {
+  background-color: #262626 !important;
+  color: #a8a8a8 !important;
+}
+
+[data-theme="light"] .search-result-count-badge {
+  background-color: #f0f0f0 !important;
+  color: #737373 !important;
+}
+
+/* Add transition to all elements for smooth theme switching */
+.search-drawer * {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s !important;
+}
+
+/* Drawer footer in dark mode */
+[data-theme="dark"] .ant-drawer-footer {
+  border-top-color: #424242 !important;
+  background-color: #000 !important;
+}
+
+/* Drawer header styling */
+[data-theme="dark"] .ant-drawer-header {
+  border-bottom-color: #424242 !important;
+}
+
+[data-theme="dark"] .ant-drawer-title {
+  color: #f5f5f5 !important;
+}
+
+/* Spin/loader styling */
+[data-theme="dark"] .ant-spin-dot i {
+  background-color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .ant-spin-text {
+  color: #f5f5f5 !important;
+}
+
+/* Empty state styling */
+[data-theme="dark"] .ant-empty-image svg path {
+  fill: #424242 !important;
+}
+
+/* Drawer animation */
+.ant-drawer-content-wrapper {
+  transition: transform 0.3s ease !important;
+}

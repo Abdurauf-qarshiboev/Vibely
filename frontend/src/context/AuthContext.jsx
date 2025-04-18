@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser({});
     setIsAuth(false);
-    // sessionStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     navigate("/auth/login");
     message.success("Successfully logged out!");
   };
@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuth(true);
     } catch (err) {
       console.log(err);
-      logout();
+      // logout();
     }
   };
 
