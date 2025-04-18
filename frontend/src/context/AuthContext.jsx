@@ -94,17 +94,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // const logout = () => {
-  //   setUser({});
-  //   setIsAuth(false);
-  //   sessionStorage.removeItem("token");
-  //   navigate("/auth/login");
-  //   message.success("Successfully logged out!");
-  // };
+  const logout = () => {
+    setUser({});
+    setIsAuth(false);
+    // sessionStorage.removeItem("token");
+    navigate("/auth/login");
+    message.success("Successfully logged out!");
+  };
 
   const checkUser = async () => {
     try {
-      const { data } = await api.get("auth/checkuser");
+      const { data } = await api.get("auth/check-user");
+      console.log(data);
       setUser({ ...data });
       setIsAuth(true);
     } catch (err) {
@@ -113,17 +114,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUser = async (updatedUser) => {
-    try {
-      const userId = user._id;
-      const { data } = await api.put(`auth/update/${userId}`, updatedUser);
-      setUser({ ...data });
-      message.success("User updated successfully!");
-    } catch (error) {
-      console.error(error);
-      message.error("Failed to update user!");
-    }
-  };
+  // const updateUserStatus = async (status) => {
+  //   try {
+  //     const userId = user._id;
+  //     const { data } = await api.put(`users/profile`, status);
+  //     setUser({ ...data });
+  //     message.success("User updated successfully!");
+  //   } catch (error) {
+  //     console.error(error);
+  //     message.error("Failed to update user!");
+  //   }
+  // };
 
   return (
     <AuthContext.Provider
@@ -132,9 +133,9 @@ export const AuthProvider = ({ children }) => {
         isAuth,
         signup,
         login,
-        // logout,
+        logout,
         checkUser,
-        updateUser,
+        // updateUserStatus,
       }}
     >
       {children}

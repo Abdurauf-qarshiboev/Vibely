@@ -1,139 +1,193 @@
+"use client";
+
 import { Link, Outlet } from "react-router-dom";
-import React, { useState } from "react";
+import { useState, useRef } from "react";
 import {
-  InstagramOutlined,
-  CaretLeftOutlined,
-  CaretRightOutlined,
-  UploadOutlined,
   HomeOutlined,
+  HomeFilled,
   SearchOutlined,
   CompassOutlined,
+  CompassFilled,
   PlusSquareOutlined,
+  PlusSquareFilled,
+  BellOutlined,
   BellFilled,
   UserOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-import { Layout, Menu, theme } from "antd";
+import { Layout, Menu, Drawer, Button, Spin} from "antd";
+import MoreMenu from "../components/MoreMenu";
+import { useTheme } from "../context/ThemeContext";
+
 const { Sider, Content } = Layout;
 
 const DashboardLayout = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [moreMenuVisible, setMoreMenuVisible] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const moreButtonRef = useRef(null);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const showMoreMenu = () => {
+    setMoreMenuVisible(true);
+  };
+
+  const hideMoreMenu = () => {
+    setMoreMenuVisible(false);
+  };
+
+  const showDrawer = () => {
+    setDrawerOpen(true);
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+  };
+
+  const handleMenuClick = ({ key }) => {
+    if (key === "2") {
+      // "Search" key
+      showDrawer();
+    }
+  };
 
   return (
     <div className="h-full">
       <Layout className="h-full" hasSider>
         <Sider
-          theme="dark"
+          theme={isDark ? "dark" : "light"}
           trigger={null}
-          collapsible
-          collapsed={collapsed}
           style={{
             paddingTop: "8px",
             paddingLeft: "12px",
             paddingRight: "12px",
-            paddingBottom: "20px",
-            borderRight: "1px solid #e5e7eb",
+            paddingBottom: "22px",
+            borderRight: `1px solid ${
+              isDark ? "var(--border-dark)" : "var(--border-light)"
+            }`,
+            backgroundColor: isDark ? "#000" : "#fff",
           }}
         >
           <Link
             to="/"
-            className="flex items-center justify-center space-x-2 h-12 hover:text-white py-3 mb-4"
+            className={`flex items-center justify-center space-x-2 h-12 py-3 mb-4 ${
+              isDark
+                ? "text-[#f5f5f5] hover:text-white"
+                : "text-[#000] hover:text-gray-800"
+            }`}
           >
-            {collapsed ? (
-              <InstagramOutlined style={{ fontSize: 26 }} />
-            ) : (
-              <span className="text-lg font-semibold">MilliyGram</span>
-            )}
+            <span className="text-lg font-semibold">MilliyGram</span>
           </Link>
 
           <Menu
-            className="space-y-4"
-            theme="dark"
+            className="space-y-3"
+            theme={isDark ? "dark" : "light"}
             defaultSelectedKeys={["1"]}
             style={{
-              fontSize: 15,
+              fontSize: 16,
+              backgroundColor: isDark ? "#000" : "#fff",
             }}
+            onClick={handleMenuClick}
             items={[
               {
                 key: "1",
-                icon: (
-                  <HomeOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                ),
+                icon: <HomeOutlined style={{ fontSize: 22 }} />,
                 label: "Home",
               },
               {
                 key: "2",
-                icon: (
-                  <SearchOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                ),
+                icon: <SearchOutlined style={{ fontSize: 22 }} />,
                 label: "Search",
               },
               {
                 key: "3",
-                icon: (
-                  <CompassOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                ),
+                icon: <CompassOutlined style={{ fontSize: 22 }} />,
                 label: "Explore",
               },
               {
                 key: "4",
-                icon: (
-                  <BellFilled
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                ),
+                icon: <BellOutlined style={{ fontSize: 22 }} />,
                 label: "Notifications",
               },
               {
                 key: "5",
-                icon: (
-                  <PlusSquareOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                ),
+                icon: <PlusSquareOutlined style={{ fontSize: 22 }} />,
                 label: "Create",
               },
               {
                 key: "6",
-                icon: (
-                  <UserOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                ),
+                icon: <UserOutlined style={{ fontSize: 22 }} />,
                 label: "Profile",
               },
             ]}
           />
-          <button className="flex items-center gap-2 px-4 py-2 text-white hover:bg-white/10 rounded-md transition">
-            <MenuOutlined style={{ fontSize: 20 }} />
+
+          <button
+            ref={moreButtonRef}
+            onClick={showMoreMenu}
+            className={`flex items-center gap-3 mx-1 px-4 py-2 mt-auto text-base rounded-md transition ${
+              isDark
+                ? "text-[#f5f5f5] hover:bg-white/10"
+                : "text-[#000] hover:bg-black/5"
+            }`}
+          >
+            <MenuOutlined style={{ fontSize: 22 }} />
             <span>More</span>
           </button>
+
+          <MoreMenu
+            buttonRef={moreButtonRef}
+            visible={moreMenuVisible}
+            onClose={hideMoreMenu}
+          />
         </Sider>
-        <Layout>
+
+        <Layout style={{ backgroundColor: isDark ? "#000" : "#fff" }}>
           <Content className="overflow-auto hide-scrollbar scroll-smooth">
             <Outlet />
           </Content>
         </Layout>
       </Layout>
+
+      {/*  Drawer Component */}
+      <Drawer
+        title="Search"
+        destroyOnClose
+        placement="right"
+        width={400}
+        open={drawerOpen}
+        onClose={closeDrawer}
+        style={{
+          backgroundColor: `${isDark ? "#262626" : "#fff"}`,
+          color: `${isDark ? "#f5f5f5" : "000"}`,
+        }}
+      >
+        {loading ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "40px",
+            }}
+          >
+            <Spin size="large" />
+          </div>
+        ) : (
+          <>
+            <p>Search result 1</p>
+            <p>Search result 2</p>
+            <p>Search result 3</p>
+          </>
+        )}
+      </Drawer>
     </div>
   );
 };
+
 export default DashboardLayout;
