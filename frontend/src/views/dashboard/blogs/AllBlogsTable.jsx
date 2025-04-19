@@ -1,18 +1,35 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
-import { Empty, Spin } from "antd";
+import { Empty, Spin, Carousel } from "antd"; // Added Carousel import
 import { Splide, SplideSlide } from "@splidejs/react-splide";
 import "@splidejs/react-splide/css";
+import VerifiedBadge from "../../../components/VerifiedBadge";
 import { useBlogsContext } from "../../../context/main/BlogsContext";
 import { useModalContext } from "../../../context/main/ModalContext";
 import { useCommentsContext } from "../../../context/main/CommentsContext";
 import { useHashtagsContext } from "../../../context/main/HashtagsContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { api } from "../../../helpers/api";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons"; // Added for custom arrows
 
-// const options = {
-//   type: "fade",
-//   rewind: true,
-// };
+// Sample array of carousel images for posts - used directly for all posts
+const carouselImages = [
+  "https://images.unsplash.com/photo-1682687982107-14492010e05e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1682687220566-5599dbbebf11?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+];
+
+// Custom arrow components for the carousel
+const NextArrow = (props) => (
+  <div className="custom-arrow next-arrow" onClick={props.onClick}>
+    <RightOutlined style={{ color: "white", fontSize: "18px" }} />
+  </div>
+);
+
+const PrevArrow = (props) => (
+  <div className="custom-arrow prev-arrow" onClick={props.onClick}>
+    <LeftOutlined style={{ color: "white", fontSize: "18px" }} />
+  </div>
+);
 
 const AllBlogsTable = () => {
   const { blogs, allBlogs, timeSince } = useBlogsContext();
@@ -33,9 +50,14 @@ const AllBlogsTable = () => {
         const result = await allBlogs();
         console.log("Fetched blogs:", result);
 
-        // Get user data from session storage
-        const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
-        setUser(userData);
+        // Get user data from session storage properly
+        try {
+          const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
+          setUser(userData);
+        } catch (parseError) {
+          console.error("Error parsing user data:", parseError);
+          setUser({});
+        }
       } catch (err) {
         console.error("Error loading blogs:", err);
       } finally {
@@ -46,7 +68,7 @@ const AllBlogsTable = () => {
     fetchData();
   }, [allBlogs]);
 
-  // Update posts data when blogs change
+  // Update posts data when blogs change - don't add carousel images
   useEffect(() => {
     if (blogs && blogs.data && Array.isArray(blogs.data)) {
       setPostsData(blogs.data);
@@ -146,9 +168,9 @@ const AllBlogsTable = () => {
                     className="size-7 sm:size-9 rounded-full bg-gray-100"
                   />
                 </a>
-                <div className="flex items-center justify-center gap-1 text-sm leading-6">
-                  <p
-                    className={`font-bold ${
+                <div className="flex items-center justify-center gap-1 text-base leading-6">
+                  <span
+                    className={`font-bold flex items-center gap-1 ${
                       isDark ? "text-white" : "text-black"
                     }`}
                   >
@@ -158,10 +180,12 @@ const AllBlogsTable = () => {
                         isDark ? "text-white" : "text-black"
                       }`}
                     >
-                      {blog.user?.firstName || blog.user?.username}{" "}
-                      {blog.user?.lastName}
+                      {blog.user?.username}
                     </a>
-                  </p>
+                    {blog.user?.verified && <VerifiedBadge />}
+                    {/* temporary badge */}
+                    <VerifiedBadge />
+                  </span>
                   <span className="hidden sm:block">·</span>
                   <div className="hidden sm:block time text-sm text-gray-500">
                     {timeSince(blog.createdAt)}
@@ -169,15 +193,34 @@ const AllBlogsTable = () => {
                 </div>
               </div>
 
+              {/* Image Carousel - using carouselImages directly */}
               <div className="relative w-full">
-                <div className="aspect-[32/28] w-full">
-                  <img
-                    src="/images/notfound.png"
-                    alt="Placeholder Image"
-                    className="w-full h-full sm:rounded bg-gray-100 object-cover"
-                  />
+                <div className="carousel-container aspect-[32/28] w-full overflow-hidden sm:rounded">
+                  <Carousel
+                    arrows
+                    nextArrow={<NextArrow />}
+                    prevArrow={<PrevArrow />}
+                    dots={{ className: "custom-dots" }}
+                    className="post-carousel"
+                  >
+                    {carouselImages.map((image, index) => (
+                      <div key={index} className="carousel-item">
+                        <div className="aspect-[32/28] w-full">
+                          <img
+                            src={image}
+                            alt={`Post image ${index + 1}`}
+                            className="object-cover w-full h-full sm:rounded"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "./assets/notfoundimage.png"; // Your fallback image
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </Carousel>
                 </div>
-                <div className="absolute inset-0 sm:rounded ring-1 ring-inset ring-gray-900/10" />
               </div>
 
               <div className="w-full px-1">
@@ -226,10 +269,27 @@ const AllBlogsTable = () => {
 
                 <div className="relative">
                   <div
-                    className={`mt-2 md:mt-3 text-sm sm:text-base font-semibold leading-5 ${
+                    className={`flex items-center gap-2 mt-1 text-sm sm:text-base font-semibold leading-5 ${
                       isDark ? "text-white" : "text-black"
                     }`}
                   >
+                    <span
+                      className={`font-bold flex items-center ${
+                        isDark ? "text-white" : "text-black"
+                      }`}
+                    >
+                      <a
+                        href="#"
+                        className={`font-semibold w-fit ${
+                          isDark ? "text-white" : "text-black"
+                        }`}
+                      >
+                        {blog.user?.username}
+                      </a>
+                      {blog.user?.verified && <VerifiedBadge />}
+                      {/* temporary badge */}
+                      <VerifiedBadge />
+                    </span>
                     {blog.title}
                   </div>
                   <div onClick={(e) => handleHashtagClick(e)}>

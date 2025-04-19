@@ -543,3 +543,102 @@ div[data-theme="dark"] a {
   background-color: #fff;
   color: #000;
 }
+
+/* Carousel Styles for posts */
+.carousel-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+}
+
+[data-theme="dark"] .carousel-container {
+  background-color: #222;
+}
+
+.carousel-item {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* Custom arrow positioning */
+.custom-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 10;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.custom-arrow:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.prev-arrow {
+  left: 10px;
+}
+
+.next-arrow {
+  right: 10px;
+}
+
+/* Custom dots styling */
+.ant-carousel .slick-dots.custom-dots {
+  bottom: 12px;
+}
+
+.ant-carousel .slick-dots.custom-dots li button {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 50%;
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.ant-carousel .slick-dots.custom-dots li.slick-active button {
+  background: white !important;
+}
+
+/* Apply consistent aspect ratio */
+.post-carousel .slick-list,
+.post-carousel .slick-track,
+.post-carousel .slick-slide > div {
+  height: 100%;
+}
+
+/* Ensure the images maintain aspect ratio and cover their containers */
+.carousel-item img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .custom-arrow {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .custom-arrow svg {
+    font-size: 14px;
+  }
+  
+  .ant-carousel .slick-dots.custom-dots {
+    bottom: 8px;
+  }
+  
+  .ant-carousel .slick-dots.custom-dots li button {
+    width: 6px !important;
+    height: 6px !important;
+  }
+}

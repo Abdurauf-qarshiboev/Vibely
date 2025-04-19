@@ -105,9 +105,13 @@ export const AuthProvider = ({ children }) => {
   const checkUser = async () => {
     try {
       const { data } = await api.get("auth/check-user");
-      sessionStorage.setItem("user", ...data)
-      console.log(data);
-      setUser({ ...data });
+      console.log("Check user data:", data?.data);
+
+      // Convert object to JSON string before storing in sessionStorage
+      const currentUser = { ...data.data };
+      sessionStorage.setItem("user", JSON.stringify(currentUser));
+
+      setUser(currentUser);
       setIsAuth(true);
     } catch (err) {
       console.log(err);
