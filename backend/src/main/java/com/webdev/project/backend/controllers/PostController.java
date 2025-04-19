@@ -238,7 +238,7 @@ public class PostController {
     }
 
 
-    @DeleteMapping("/{id}/like")
+    @DeleteMapping("/{id}/unlike")
     public ResponseEntity<?> unlikePost(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails
@@ -262,19 +262,19 @@ public class PostController {
 
 
     @GetMapping("/{id}/likes")
-    public ResponseEntity<?> getPostLikes(
-            @PathVariable Long id,
-            @AuthenticationPrincipal UserDetails userDetails
+    public ResponseEntity<?> getPostLikesCount(
+            @PathVariable Long id
     ) {
         try {
-            List<Like> likes = likeService.getPostLikes(id);
-            return ResponseUtil.success(ResponseEntity.ok(likes), "Fetched post likes successfully");
+            int likeCount = likeService.getPostLikes(id).size();
+            return ResponseUtil.success(ResponseEntity.ok(likeCount), "Fetched post like count successfully");
         } catch (ResourceNotFoundException e) {
             return ResponseUtil.error("POST_028", e.getMessage(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             return ResponseUtil.error("POST_029", "Failed to fetch post likes: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
     @GetMapping("/search")
