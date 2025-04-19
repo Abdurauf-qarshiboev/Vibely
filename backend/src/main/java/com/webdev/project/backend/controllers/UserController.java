@@ -1,9 +1,10 @@
 package com.webdev.project.backend.controllers;
 
 import com.webdev.project.backend.dto.UserDTO;
+import com.webdev.project.backend.dto.UserExtendedDTO;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.requests.UserUpdateRequest;
-import com.webdev.project.backend.responses.ErrorResponse;
+import com.webdev.project.backend.services.FollowService;
 import com.webdev.project.backend.services.UserService;
 import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +22,12 @@ import java.util.Optional;
 public class UserController {
 
     private final UserService userService;
+    private final FollowService followService;
 
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, FollowService followService) {
         this.userService = userService;
+        this.followService = followService;
     }
 
     // Get user by username
@@ -38,12 +41,16 @@ public class UserController {
                 return ResponseUtil.error("UBU_002", "User profile is not found", HttpStatus.NOT_FOUND);
             }
 
+            UserExtendedDTO userDTO = new UserExtendedDTO(user.get());
+            userDTO.setFollowerCount(followService.getFollowersCount(user.get()));
+            userDTO.setFollowingCount(followService.getFollowingsCount(user.get()));
+
             return ResponseUtil.success(
-                    new ResponseEntity<>(new UserDTO(user.get()), HttpStatus.CREATED),
+                    new ResponseEntity<>(userDTO, HttpStatus.CREATED),
                     "User profile retrieved"
             );
         } catch (Exception e) {
-            return ResponseUtil.error("UBU_001", "Internal Server Error", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseUtil.error("UBU_001", "Internal Server Error: " + e.getMessage() , HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
     }

@@ -104,4 +104,11 @@ public class FollowService {
         return followRepository.findByFollowedAndIsApprovedFalse(user);
     }
 
+    public Integer getFollowersCount(User user) {
+        return followRepository.getFollowsCountByFollowed(user);
+    }
+
+    public Integer getFollowingsCount(User user) {
+        return followRepository.getFollowsCountByFollower(user);
+    }
 }
