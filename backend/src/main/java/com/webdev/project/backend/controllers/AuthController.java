@@ -1,5 +1,6 @@
 package com.webdev.project.backend.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webdev.project.backend.dto.UserDTO;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.enums.UserRole;
@@ -7,19 +8,19 @@ import com.webdev.project.backend.repositories.UserRepository;
 import com.webdev.project.backend.requests.RegistrationRequest;
 import com.webdev.project.backend.responses.LoginSuccessResponse;
 import com.webdev.project.backend.services.CustomUserDetailsService;
+import com.webdev.project.backend.services.ImageService;
 import com.webdev.project.backend.utils.JwtUtils;
 import com.webdev.project.backend.requests.LoginRequest;
 import com.webdev.project.backend.utils.ResponseUtil;
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import com.webdev.project.backend.services.UserService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
@@ -32,13 +33,15 @@ public class AuthController {
     private final CustomUserDetailsService userDetailsService;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final ImageService imageService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, CustomUserDetailsService userDetailsService, UserService userService, UserRepository userRepository) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, CustomUserDetailsService userDetailsService, UserService userService, UserRepository userRepository, ImageService imageService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.userService = userService;
         this.userRepository = userRepository;
+        this.imageService = imageService;
     }
 
     @PostMapping("/login")
@@ -73,8 +76,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-        public ResponseEntity<?> registerUser(@Valid @RequestBody RegistrationRequest registrationRequest) {
+        public ResponseEntity<?> registerUser(
+                @RequestParam("request") String requestJson,
+                @RequestParam(value = "avatar", required = false) MultipartFile avatarFile
+    ) {
         try {
+            // Convert JSON string to CreatePostRequest object
+            ObjectMapper objectMapper = new ObjectMapper();
+            RegistrationRequest registrationRequest = objectMapper.readValue(requestJson, RegistrationRequest.class);
 
             // Create a new User from the registration request
             User user = new User();
@@ -91,6 +100,13 @@ public class AuthController {
             user.setRole(UserRole.USER);
             user.setPrivate(false);
             user.setVerified(false);
+
+            // Handle avatar upload if provided
+            if (avatarFile != null && !avatarFile.isEmpty()) {
+                String fileName = imageService.saveImage(avatarFile);
+                String avatarUrl = imageService.getImageUrl(fileName);
+                user.setAvatar(avatarUrl);
+            }
 
             // Create the user in DB
             User createdUser = userService.createUser(user);
