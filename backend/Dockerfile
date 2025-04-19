@@ -43,5 +43,9 @@ ENV DB_NAME=project2_db
 ENV DB_PASS=1649
 ENV DB_USER=postgres
 
+# Specify 'upload' directory
+USER root
+RUN mkdir -p /opt/app/uploads && chmod 777 /opt/app/uploads
+
 # Start the application with JVM optimizations for containers
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/opt/app/app.jar"]
