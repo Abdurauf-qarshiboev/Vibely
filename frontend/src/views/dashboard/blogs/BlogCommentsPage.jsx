@@ -8,7 +8,6 @@ import { useModalContext } from "@/context/main/ModalContext";
 import { useAuth } from "@/context/AuthContext";
 import { useHashtagsContext } from "@/context/main/HashtagsContext";
 import { useTheme } from "@/context/ThemeContext";
-import { updateLikesInLocalStorage } from "../../../utils/LocalStorageUtils";
 import { Menu } from "@headlessui/react";
 import { Carousel } from "antd";
 import { api } from "../../../helpers/api";
@@ -120,9 +119,6 @@ const BlogCommentsPage = () => {
           ? Math.max(0, prev.likeCount - 1)
           : prev.likeCount + 1,
       }));
-
-      updateLikesInLocalStorage(blog.id, !blog.liked);
-      console.log("Updated like status:", !blog.liked);
     } catch (error) {
       console.error("Failed to toggle like:", error);
     }
@@ -341,8 +337,6 @@ const BlogCommentsPage = () => {
                           {blog.user?.username}
                         </a>
                         {blog.user?.verified && <VerifiedBadge />}
-                        {/* temporary badge */}
-                        <VerifiedBadge />
                       </span>
                     </div>
                   </div>
@@ -379,8 +373,6 @@ const BlogCommentsPage = () => {
                               {blog.user?.username}
                             </a>
                             {blog.user?.verified && <VerifiedBadge />}
-                            {/* temporary badge */}
-                            <VerifiedBadge />
                           </span>
                         </div>
                         <div>

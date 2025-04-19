@@ -1,8 +1,5 @@
-/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
-import { Empty, Spin, Carousel } from "antd"; // Added Carousel import
-import { Splide, SplideSlide } from "@splidejs/react-splide";
-import "@splidejs/react-splide/css";
+import { Empty, Spin, Carousel } from "antd";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 import { useBlogsContext } from "../../../context/main/BlogsContext";
 import { useModalContext } from "../../../context/main/ModalContext";
@@ -10,13 +7,7 @@ import { useCommentsContext } from "../../../context/main/CommentsContext";
 import { useHashtagsContext } from "../../../context/main/HashtagsContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { api } from "../../../helpers/api";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons"; // Added for custom arrows
-
-// Sample array of carousel images for posts - used directly for all posts
-const carouselImages = [
-  "https://images.unsplash.com/photo-1682687982107-14492010e05e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-  "https://images.unsplash.com/photo-1682687220566-5599dbbebf11?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-];
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 
 // Custom arrow components for the carousel
 const NextArrow = (props) => (
@@ -42,15 +33,66 @@ const AllBlogsTable = () => {
   const [user, setUser] = useState({});
   const [loading, setLoading] = useState(true);
   const [postsData, setPostsData] = useState([]);
+  const [imageCache, setImageCache] = useState({});
+
+  // Helper function to convert blob to data URL
+  const blobToDataURL = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Helper function to get image URL
+  const getImageUrl = async (imageId) => {
+    try {
+      if (!imageId) return null;
+
+      // Check cache first
+      if (imageCache[imageId]) {
+        return imageCache[imageId];
+      }
+
+      // Use responseType: 'blob' to handle binary data
+      const response = await api.get(`images/${imageId}`, {
+        responseType: "blob",
+      });
+
+      if (response && response.data) {
+        const contentType = response.headers["content-type"] || "image/jpeg";
+        const imageUrl = await blobToDataURL(response.data, contentType);
+
+        // Cache the result
+        setImageCache((prev) => ({ ...prev, [imageId]: imageUrl }));
+        return imageUrl;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching image ${imageId}:`, error);
+      return null;
+    }
+  };
+
+  // Helper function to get avatar URL
+  const getAvatarUrl = async (avatarId) => {
+    if (!avatarId) return null;
+    try {
+      return await getImageUrl(avatarId);
+    } catch (error) {
+      console.error(`Error fetching avatar ${avatarId}:`, error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const result = await allBlogs();
-        console.log("Fetched blogs:", result);
+        await allBlogs();
 
-        // Get user data from session storage properly
+        // Get user data from session storage
         try {
           const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
           setUser(userData);
@@ -68,10 +110,61 @@ const AllBlogsTable = () => {
     fetchData();
   }, [allBlogs]);
 
-  // Update posts data when blogs change - don't add carousel images
+  // Process posts to include image URLs
   useEffect(() => {
-    if (blogs && blogs.data && Array.isArray(blogs.data)) {
-      setPostsData(blogs.data);
+    const processPosts = async () => {
+      if (blogs?.data && Array.isArray(blogs.data)) {
+        setLoading(true);
+
+        try {
+          // Process each blog post to include images
+          const processedPosts = await Promise.all(
+            blogs.data.map(async (post) => {
+              // Get user avatar
+              let avatarUrl = null;
+              if (post.user?.avatar) {
+                avatarUrl = await getAvatarUrl(post.user.avatar);
+              }
+
+              // Get post images
+              let carouselImages = [];
+              if (post.images && post.images.length > 0) {
+                // Use Promise.allSettled to handle failures gracefully
+                const imageResults = await Promise.allSettled(
+                  post.images.map((imageId) => getImageUrl(imageId))
+                );
+
+                // Only include fulfilled promises
+                carouselImages = imageResults
+                  .filter(
+                    (result) => result.status === "fulfilled" && result.value
+                  )
+                  .map((result) => result.value);
+              }
+
+              return {
+                ...post,
+                user: {
+                  ...post.user,
+                  avatarUrl,
+                },
+                carouselImages:
+                  carouselImages.length > 0 ? carouselImages : null,
+              };
+            })
+          );
+
+          setPostsData(processedPosts);
+        } catch (error) {
+          console.error("Error processing posts:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    if (blogs?.data) {
+      processPosts();
     }
   }, [blogs]);
 
@@ -80,7 +173,7 @@ const AllBlogsTable = () => {
     console.log("Comments page is " + state + " for a blog with id:" + blogId);
   };
 
-  // Toggle like without using localStorage
+  // Toggle like
   const toggleLike = async (blog) => {
     if (!blog) return;
 
@@ -161,11 +254,16 @@ const AllBlogsTable = () => {
                 <a href="#">
                   <img
                     src={
-                      blog.user?.avatar ||
-                      "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                      blog.user?.avatarUrl ||
+                      "https://placehold.co/80x80/gray/white?text=User"
                     }
                     alt=""
                     className="size-7 sm:size-9 rounded-full bg-gray-100"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src =
+                        "https://placehold.co/80x80/gray/white?text=User";
+                    }}
                   />
                 </a>
                 <div className="flex items-center justify-center gap-1 text-base leading-6">
@@ -180,11 +278,9 @@ const AllBlogsTable = () => {
                         isDark ? "text-white" : "text-black"
                       }`}
                     >
-                      {blog.user?.username}
+                      {blog.user?.username || "user"}
                     </a>
                     {blog.user?.verified && <VerifiedBadge />}
-                    {/* temporary badge */}
-                    <VerifiedBadge />
                   </span>
                   <span className="hidden sm:block">·</span>
                   <div className="hidden sm:block time text-sm text-gray-500">
@@ -193,32 +289,45 @@ const AllBlogsTable = () => {
                 </div>
               </div>
 
-              {/* Image Carousel - using carouselImages directly */}
+              {/* Image Carousel */}
               <div className="relative w-full">
                 <div className="carousel-container aspect-[32/28] w-full overflow-hidden sm:rounded">
                   <Carousel
-                    arrows
+                    arrows={
+                      blog.carouselImages && blog.carouselImages.length > 1
+                    }
                     nextArrow={<NextArrow />}
                     prevArrow={<PrevArrow />}
                     dots={{ className: "custom-dots" }}
                     className="post-carousel"
                   >
-                    {carouselImages.map((image, index) => (
-                      <div key={index} className="carousel-item">
+                    {blog.carouselImages && blog.carouselImages.length > 0 ? (
+                      blog.carouselImages.map((imageUrl, index) => (
+                        <div key={index} className="carousel-item">
+                          <div className="aspect-[32/28] w-full">
+                            <img
+                              src={imageUrl}
+                              alt={`Post image ${index + 1}`}
+                              className="object-cover w-full h-full sm:rounded"
+                              loading="lazy"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src =
+                                  "https://placehold.co/600x400/gray/white?text=Image+Not+Found";
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="carousel-item">
                         <div className="aspect-[32/28] w-full">
-                          <img
-                            src={image}
-                            alt={`Post image ${index + 1}`}
-                            className="object-cover w-full h-full sm:rounded"
-                            loading="lazy"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "./assets/notfoundimage.png"; // Your fallback image
-                            }}
-                          />
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800">
+                            <span className="text-gray-500">No images</span>
+                          </div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </Carousel>
                 </div>
               </div>
@@ -287,15 +396,13 @@ const AllBlogsTable = () => {
                         {blog.user?.username}
                       </a>
                       {blog.user?.verified && <VerifiedBadge />}
-                      {/* temporary badge */}
-                      <VerifiedBadge />
                     </span>
                     {blog.title}
                   </div>
                   <div onClick={(e) => handleHashtagClick(e)}>
                     <p
                       dangerouslySetInnerHTML={{
-                        __html: processedText(blog.body),
+                        __html: processedText(blog.body || ""),
                       }}
                       className={`mt-1 text-sm ${
                         isDark ? "text-gray-300" : "text-black"

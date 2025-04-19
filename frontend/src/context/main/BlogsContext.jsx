@@ -5,6 +5,7 @@ const BlogsContext = createContext();
 
 export const BlogsProvider = ({ children }) => {
   const [blogs, setBlogs] = useState({ data: [] });
+  const [myblogs, setMyBlogs] = useState({ data: [] });
   const [loading, setLoading] = useState(false);
 
   // Fetch all blogs for the feed
@@ -26,6 +27,29 @@ export const BlogsProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Error fetching blogs:", error);
+      return { success: false, data: [] };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  const myBlogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/posts");
+      console.log("My Posts:", response.data);
+
+      if (response.data && response.data.success) {
+        setMyBlogs(response.data);
+        return response.data;
+      } else {
+        console.error(
+          "Error fetching my posts: Invalid response structure",
+          response
+        );
+        return { success: false, data: [] };
+      }
+    } catch (error) {
+      console.error("Error fetching my Posts:", error);
       return { success: false, data: [] };
     } finally {
       setLoading(false);
@@ -67,8 +91,10 @@ export const BlogsProvider = ({ children }) => {
     <BlogsContext.Provider
       value={{
         blogs,
+        myblogs,
         loading,
         allBlogs,
+        myBlogs,
         getBlogById,
         timeSince,
       }}

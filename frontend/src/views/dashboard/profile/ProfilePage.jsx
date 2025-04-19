@@ -1,73 +1,196 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useBlogsContext } from "@/context/main/BlogsContext";
+import { useCommentsContext } from "../../../context/main/CommentsContext";
+import { useHashtagsContext } from "../../../context/main/HashtagsContext";
+import { useModalContext } from "../../../context/main/ModalContext";
 import { useTheme } from "@/context/ThemeContext";
+import { api } from "@/helpers/api";
+import { getImageUrl } from "../../../utils/ImageHelpers";
+import BlogCommentsPage from "../../../views/dashboard/blogs/BlogCommentsPage"; // Import the comments page component
 import {
   CameraIcon,
   PlusIcon,
   UserIcon,
   Cog8ToothIcon,
+  XMarkIcon, // Added for close button
 } from "@heroicons/react/24/outline";
 import { PhotoIcon, BookmarkIcon, TagIcon } from "@heroicons/react/24/solid";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { blogs, allBlogs, loading } = useBlogsContext();
+  const { myblogs, myBlogs, loading } = useBlogsContext();
+  const { setToggle } = useModalContext();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const [activeTab, setActiveTab] = useState("posts");
   const [userPosts, setUserPosts] = useState([]);
   const [profileData, setProfileData] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [imageCache, setImageCache] = useState({});
+  const { getCommentDraft, updateCommentDraft, submitComment } =
+      useCommentsContext();
+    const { processedText, handleHashtagClick } = useHashtagsContext();
+  const myBlogsFetched = useRef(false);
 
+  // States for handling post comments view
+  const [selectedPostId, setSelectedPostId] = useState(null);
+  const [selectedPostData, setSelectedPostData] = useState(null);
+  const [loadingPostData, setLoadingPostData] = useState(false);
+
+  // Navigate to post creation page
+  const handleCreatePost = () => {
+    navigate("/create");
+  };
+
+  // Open comments for a specific post
+  const openCommentsPage = (blogId, state) => {
+    setToggle(blogId, state);
+    console.log("Comments page is " + state + " for a blog with id:" + blogId);
+  };
+
+  // Helper function for getting current user's avatar
+  const loadAvatar = async (avatarId) => {
+    if (!avatarId) return;
+    try {
+      const url = await getImageUrl(avatarId, imageCache, setImageCache);
+      if (url) {
+        setAvatarUrl(url);
+      }
+    } catch (error) {
+      console.error("Error loading avatar:", error);
+    }
+  };
+
+  // Initial profile data fetch - once only
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfileData = async () => {
       try {
-        // In a real app, you would fetch profile data from the backend
-        // For now, we'll use the authenticated user data
+        // Format join date safely
+        let formattedJoinDate = "2025-04-19";
+        if (user?.created_at) {
+          formattedJoinDate = user.created_at;
+        }
+
+        // Set initial profile data
         setProfileData({
-          username: user?.username || "username",
-          fullName: `${user?.firstName || "User"} ${user?.lastName || ""}`,
+          username: user?.username || "User",
+          fullName: `${user?.firstName || "User"} ${user?.lastName || "User"}`,
           avatar: user?.avatar || null,
           bio: user?.bio || "Personal blog",
           verified: user?.verified || false,
           postsCount: 0,
-          followersCount: 135,
-          followingCount: 642,
+          followersCount: user?.followersCount || 0,
+          followingCount: user?.followingCount || 0,
           pronouns: "he/him",
           links: [],
+          email: user?.email || "",
+          joinDate: formattedJoinDate,
         });
 
-        await allBlogs();
+        // If user has an avatar, load it
+        if (user?.avatar) {
+          await loadAvatar(user.avatar);
+        }
       } catch (error) {
-        console.error("Error fetching profile data:", error);
+        console.error("Error setting profile data:", error);
       }
     };
 
-    fetchData();
-  }, [user, allBlogs]);
+    fetchProfileData();
+  }, [user]);
 
-  // Set user posts when blogs change
+  // Fetch my blogs once
   useEffect(() => {
-    if (blogs?.data && Array.isArray(blogs.data)) {
-      // Filter posts by current user
-      const filteredPosts = blogs.data.filter(
-        (blog) => blog.user?.username === user?.username
-      );
-      setUserPosts(filteredPosts);
-
-      // Update profile posts count
-      if (profileData) {
-        setProfileData((prev) => ({
-          ...prev,
-          postsCount: filteredPosts.length,
-        }));
+    const fetchMyBlogs = async () => {
+      if (!myBlogsFetched.current) {
+        myBlogsFetched.current = true;
+        try {
+          await myBlogs();
+        } catch (error) {
+          console.error("Error fetching my blogs:", error);
+          // Reset the flag after a delay to allow retry
+          setTimeout(() => {
+            myBlogsFetched.current = false;
+          }, 5000);
+        }
       }
+    };
+
+    fetchMyBlogs();
+  }, [myBlogs]);
+
+  // Process posts when myblogs changes - with error handling
+  useEffect(() => {
+    const processUserPosts = async () => {
+      if (myblogs?.data && Array.isArray(myblogs.data)) {
+        try {
+          // No need to filter - myblogs should already be user's posts
+          const processedPosts = await Promise.all(
+            myblogs.data.map(async (post) => {
+              try {
+                // Get first image as featured image
+                let featuredImageUrl = null;
+                if (post.images && post.images.length > 0) {
+                  featuredImageUrl = await getImageUrl(
+                    post.images[0],
+                    imageCache,
+                    setImageCache
+                  );
+                }
+
+                return {
+                  ...post,
+                  featuredImageUrl,
+                };
+              } catch (error) {
+                console.error(`Error processing post ${post.id}:`, error);
+                return {
+                  ...post,
+                  featuredImageUrl: null,
+                };
+              }
+            })
+          );
+
+          setUserPosts(processedPosts);
+        } catch (error) {
+          console.error("Error processing user posts:", error);
+        }
+      }
+    };
+
+    processUserPosts();
+  }, [myblogs]);
+
+  // Update posts count separately to avoid infinite updating
+  useEffect(() => {
+    if (profileData && profileData.postsCount !== userPosts.length) {
+      setProfileData((prev) => ({
+        ...prev,
+        postsCount: userPosts.length,
+      }));
     }
-  }, [blogs, user]);
+  }, [userPosts.length]);
+
+  // Format date function with error handling
+  const formatJoinDate = (dateStr) => {
+    try {
+      if (!dateStr) return "N/A";
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "N/A";
+    }
+  };
 
   if (!profileData) {
     return (
@@ -85,15 +208,20 @@ const ProfilePage = () => {
     >
       {/* Top Section with Profile Info */}
       <div className="max-w-4xl mx-auto px-4 pt-6 sm:pt-8">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start">
+        <div className="flex flex-col sm:flex-row items-center sm:items-center">
           {/* Profile Image */}
           <div className="relative w-24 h-24 sm:w-32 sm:h-32 mb-4 sm:mb-0 sm:mr-8">
-            {profileData.avatar ? (
+            {avatarUrl ? (
               <div className="w-full h-full rounded-full overflow-hidden border border-1 border-gray-300">
                 <img
-                  src={profileData.avatar}
+                  src={avatarUrl}
                   alt={profileData.username}
                   className="object-cover w-full h-full"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "https://placehold.co/300x300/gray/white?text=User";
+                  }}
                 />
               </div>
             ) : (
@@ -116,7 +244,7 @@ const ProfilePage = () => {
           {/* Profile Info */}
           <div className="flex-1 text-center sm:text-left">
             {/* Username and Edit Profile */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start mb-4">
+            <div className="flex flex-col sm:flex-row items-center  sm:items-center mb-4">
               <div className="flex items-center mb-3 sm:mb-0">
                 <div className="text-xl font-semibold">
                   {profileData.username}
@@ -182,11 +310,23 @@ const ProfilePage = () => {
 
             {/* Bio */}
             <div className="text-left">
-              <p className="font-semibold">{profileData.fullName}</p>
-              {profileData.pronouns && (
-                <p className="text-gray-500">{profileData.pronouns}</p>
-              )}
-              <p>{profileData.bio}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="font-semibold text-sm">
+                  {profileData.fullName}
+                </div>
+                {profileData.pronouns && (
+                  <div className="text-gray-500">{profileData.pronouns}</div>
+                )}
+              </div>
+              <p className="text-sm">{profileData.bio}</p>
+
+              {/* Display username with @ */}
+              <div className="text-gray-500">{profileData.email}</div>
+
+              {/* Show join date */}
+              <div className="text-gray-500 text-sm">
+                Joined {formatJoinDate(profileData.joinDate)}
+              </div>
 
               {profileData.links && profileData.links.length > 0 && (
                 <div className="mt-1">
@@ -213,7 +353,6 @@ const ProfilePage = () => {
             </button>
             <span className="text-xs mt-1">New</span>
           </div>
-          {/* Add more story highlights here */}
         </div>
       </div>
 
@@ -297,15 +436,78 @@ const ProfilePage = () => {
             ) : userPosts.length > 0 ? (
               <div className="grid grid-cols-3 gap-1 mt-1">
                 {userPosts.map((post) => (
-                  <div key={post.id} className="aspect-square">
+                  <div
+                    key={post.id}
+                    className="aspect-square relative cursor-pointer group"
+                    onClick={() => openCommentsPage(post.id, true)}
+                  >
+                    {/* Post image */}
                     <img
                       src={
-                        post.image ||
-                        "https://images.unsplash.com/photo-1682687982107-14492010e05e?auto=format&fit=crop&w=500&q=80"
+                        post.featuredImageUrl ||
+                        "https://placehold.co/300x300/gray/white?text=No+Image"
                       }
                       alt={post.title}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src =
+                          "https://placehold.co/300x300/gray/white?text=Error";
+                      }}
                     />
+
+                    {/* Hover overlay with likes and comments count - Instagram style */}
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-8 text-white">
+                      <div className="flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-7 h-7 mr-2"
+                        >
+                          <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                        </svg>
+                        <span className="text-xl font-medium">
+                          {post.likeCount}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-7 h-7 mr-2"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M5.337 21.718a6.707 6.707 0 01-.533-.074.75.75 0 01-.44-1.223 3.73 3.73 0 00.814-1.686c.023-.115-.022-.317-.254-.543C3.274 16.587 2.25 14.41 2.25 12c0-5.03 4.428-9 9.75-9s9.75 3.97 9.75 9c0 5.03-4.428 9-9.75 9-.833 0-1.643-.097-2.417-.279a6.721 6.721 0 01-4.246.997z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="text-xl font-medium">
+                          {post.commentCount}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Indicator for multiple images */}
+                    {post.images && post.images.length > 1 && (
+                      <div className="absolute top-2 right-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="white"
+                          className="w-5 h-5"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -322,7 +524,10 @@ const ProfilePage = () => {
                 <p className="mt-2 text-gray-500">
                   When you share photos, they will appear on your profile.
                 </p>
-                <button className="mt-4 text-blue-500 font-semibold">
+                <button
+                  onClick={handleCreatePost}
+                  className="mt-4 text-blue-500 font-semibold"
+                >
                   Share your first photo
                 </button>
               </div>
@@ -367,6 +572,7 @@ const ProfilePage = () => {
           </div>
         )}
       </div>
+      <BlogCommentsPage />
     </div>
   );
 };
