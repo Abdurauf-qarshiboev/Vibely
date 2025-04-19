@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Empty } from "antd";
+import { Empty, Spin } from "antd";
 import { Splide, SplideSlide } from "@splidejs/react-splide";
 import "@splidejs/react-splide/css";
 import { useBlogsContext } from "../../../context/main/BlogsContext";
@@ -7,74 +7,109 @@ import { useModalContext } from "../../../context/main/ModalContext";
 import { useCommentsContext } from "../../../context/main/CommentsContext";
 import { useHashtagsContext } from "../../../context/main/HashtagsContext";
 import { useTheme } from "../../../context/ThemeContext";
-import { URL } from "../../../helpers/api";
-import {
-  getLikesFromLocalStorage,
-  updateLikesInLocalStorage,
-} from "../../../utils/LocalStorageUtils";
+import { api } from "../../../helpers/api";
 
-const options = {
-  type: "fade",
-  rewind: true,
-};
+// const options = {
+//   type: "fade",
+//   rewind: true,
+// };
 
 const AllBlogsTable = () => {
-  const { blogs, allBlogs, timeSince, likeBlog } = useBlogsContext();
+  const { blogs, allBlogs, timeSince } = useBlogsContext();
   const { setToggle } = useModalContext();
-  const { getCommentDraft, updateCommentDraft, submitComment } = useCommentsContext();
+  const { getCommentDraft, updateCommentDraft, submitComment } =
+    useCommentsContext();
   const { processedText, handleHashtagClick } = useHashtagsContext();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const [user, setUser] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [postsData, setPostsData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await allBlogs();
+        setLoading(true);
+        const result = await allBlogs();
+        console.log("Fetched blogs:", result);
 
         // Get user data from session storage
         const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
         setUser(userData);
-
-        // Update liked status from local storage
-        const likes = getLikesFromLocalStorage();
-        if (blogs.data.length > 0) {
-          // We need to manually update each blog's liked status since we can't directly modify the blogs state
-          blogs.data.forEach((blog) => {
-            blog.liked = likes[blog._id] || false;
-          });
-        }
       } catch (err) {
         console.error("Error loading blogs:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
   }, [allBlogs]);
 
+  // Update posts data when blogs change
+  useEffect(() => {
+    if (blogs && blogs.data && Array.isArray(blogs.data)) {
+      setPostsData(blogs.data);
+    }
+  }, [blogs]);
+
   const openCommentsPage = (blogId, state) => {
     setToggle(blogId, state);
     console.log("Comments page is " + state + " for a blog with id:" + blogId);
   };
 
-  const toggleLike = async (blog, userId) => {
+  // Toggle like without using localStorage
+  const toggleLike = async (blog) => {
     if (!blog) return;
+
     try {
-      const isLiked = await likeBlog(blog._id, userId);
-      blog.liked = isLiked;
-      updateLikesInLocalStorage(blog._id, isLiked);
-      console.log("Updated like status:", isLiked);
+      // Update UI optimistically
+      setPostsData((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === blog.id
+            ? {
+                ...post,
+                liked: !post.liked,
+                likeCount: post.liked
+                  ? Math.max(0, post.likeCount - 1)
+                  : post.likeCount + 1,
+              }
+            : post
+        )
+      );
+
+      // Call API based on new liked status
+      if (!blog.liked) {
+        // If the post wasn't liked, like it now
+        await api.post(`posts/${blog.id}/like`);
+      } else {
+        // If the post was liked, unlike it now
+        await api.delete(`posts/${blog.id}/unlike`);
+      }
     } catch (error) {
       console.error("Failed to toggle like:", error);
+      // Revert UI on error
+      setPostsData((prevPosts) =>
+        prevPosts.map((post) => (post.id === blog.id ? blog : post))
+      );
     }
   };
 
-  const handleSubmitComment = (blogId, userId) => {
-    submitComment(blogId, userId);
+  const handleSubmitComment = (blogId, username) => {
+    submitComment(blogId, username);
   };
 
-  // If no blogs to show
-  if (blogs.data.length === 0) {
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  // If no posts to show
+  if (!postsData || postsData.length === 0) {
     return (
       <Empty
         description={
@@ -93,9 +128,9 @@ const AllBlogsTable = () => {
     >
       <div className="rounded-lg p-0 mx-auto max-w-7xl">
         <div className="mx-auto grid max-w-[32rem] grid-cols-1 gap-x-8 gap-y-5">
-          {blogs.data.map((blog) => (
+          {postsData.map((blog) => (
             <article
-              key={blog._id}
+              key={blog.id}
               className={`flex flex-col items-start justify-between ${
                 isDark ? "post-dark" : "post-light"
               }`}
@@ -103,7 +138,10 @@ const AllBlogsTable = () => {
               <div className="relative w-full pl-1 pb-2 flex items-center gap-x-2">
                 <a href="#">
                   <img
-                    src="https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                    src={
+                      blog.user?.avatar ||
+                      "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                    }
                     alt=""
                     className="size-7 sm:size-9 rounded-full bg-gray-100"
                   />
@@ -120,7 +158,8 @@ const AllBlogsTable = () => {
                         isDark ? "text-white" : "text-black"
                       }`}
                     >
-                      {blog.userId?.name} {blog.userId?.lname}
+                      {blog.user?.firstName || blog.user?.username}{" "}
+                      {blog.user?.lastName}
                     </a>
                   </p>
                   <span className="hidden sm:block">·</span>
@@ -131,46 +170,25 @@ const AllBlogsTable = () => {
               </div>
 
               <div className="relative w-full">
-                <Splide
-                  options={{
-                    ...options,
-                    arrows: blog.image?.length > 1,
-                    pagination: blog.image?.length > 1,
-                  }}
-                  aria-label="Post media"
-                >
-                  {blog.image && blog.image.length > 0 ? (
-                    blog.image.map((img, index) => (
-                      <SplideSlide key={index} className="aspect-[32/28]">
-                        <img
-                          src={`${URL}/${img.response}`}
-                          alt=""
-                          className="h-full w-full sm:rounded bg-gray-100 object-cover"
-                        />
-                      </SplideSlide>
-                    ))
-                  ) : (
-                    <SplideSlide className="h-96">
-                      <img
-                        src="/images/notfound.png"
-                        alt="Placeholder Image"
-                        className="w-full h-full sm:rounded bg-gray-100 object-cover"
-                      />
-                    </SplideSlide>
-                  )}
-                </Splide>
+                <div className="aspect-[32/28] w-full">
+                  <img
+                    src="/images/notfound.png"
+                    alt="Placeholder Image"
+                    className="w-full h-full sm:rounded bg-gray-100 object-cover"
+                  />
+                </div>
                 <div className="absolute inset-0 sm:rounded ring-1 ring-inset ring-gray-900/10" />
               </div>
 
               <div className="w-full px-1">
                 <div className="mt-2 md-mt-4 flex items-center gap-x-3 text-xs">
                   <button
-                    onClick={() => toggleLike(blog, user._id)}
+                    onClick={() => toggleLike(blog)}
                     className="relative rounded-full flex items-center justify-center gap-1 text-red-600 text-sm"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      fill={blog?.liked ? "red" : "white"}
+                      fill={blog.liked ? "red" : "white"}
                       viewBox="0 0 24 24"
                       strokeWidth="1.5"
                       stroke="red"
@@ -185,7 +203,7 @@ const AllBlogsTable = () => {
                     {blog.likeCount}
                   </button>
                   <button
-                    onClick={() => openCommentsPage(blog._id, true)}
+                    onClick={() => openCommentsPage(blog.id, true)}
                     className="relative text-sm rounded-full flex items-center justify-center gap-1 hover:text-gray-500"
                   >
                     <svg
@@ -217,7 +235,7 @@ const AllBlogsTable = () => {
                   <div onClick={(e) => handleHashtagClick(e)}>
                     <p
                       dangerouslySetInnerHTML={{
-                        __html: processedText(blog.text),
+                        __html: processedText(blog.body),
                       }}
                       className={`mt-1 text-sm ${
                         isDark ? "text-gray-300" : "text-black"
@@ -232,9 +250,9 @@ const AllBlogsTable = () => {
                   </div>
                 </div>
 
-                {blog.commentCount !== 0 && (
+                {blog.commentCount > 0 && (
                   <div className="hidden sm:block md:mt-2 text-xs sm:text-sm w-fit text-gray-600">
-                    <button onClick={() => openCommentsPage(blog._id, true)}>
+                    <button onClick={() => openCommentsPage(blog.id, true)}>
                       View all comments
                     </button>
                   </div>
@@ -250,24 +268,24 @@ const AllBlogsTable = () => {
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
-                        handleSubmitComment(blog._id, user._id);
+                        handleSubmitComment(blog.id, user.username);
                       }}
                     >
                       <div className="relative">
                         <label
-                          htmlFor={`blogcomment-${blog._id}`}
+                          htmlFor={`blogcomment-${blog.id}`}
                           className="sr-only"
                         >
                           Add a comment
                         </label>
                         <textarea
-                          value={getCommentDraft(blog._id) || ""}
+                          value={getCommentDraft(blog.id) || ""}
                           onChange={(e) =>
-                            updateCommentDraft(blog._id, e.target.value)
+                            updateCommentDraft(blog.id, e.target.value)
                           }
                           rows="2"
-                          name={`blogcomment-${blog._id}`}
-                          id={`blogcomment-${blog._id}`}
+                          name={`blogcomment-${blog.id}`}
+                          id={`blogcomment-${blog.id}`}
                           className={`block w-full resize-none border-0 border-transparent p-0 pr-10 placeholder:text-sm focus:border-0 focus:ring-0 sm:text-sm sm:leading-6 ${
                             isDark
                               ? "bg-black text-gray-300 placeholder:text-gray-500"

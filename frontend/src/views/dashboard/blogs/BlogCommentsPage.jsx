@@ -48,7 +48,7 @@ const BlogCommentsPage = () => {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    // Add null check to prevent the error
+    // Add null check for modalState
     if (modalState && modalState.id) {
       const currentBlog = getBlogById(modalState.id);
       if (currentBlog) {
@@ -60,10 +60,32 @@ const BlogCommentsPage = () => {
               isTruncated: comment.text.length > 200,
             }))
           );
+        } else {
+          setComments([]); // Set empty array if no comments
         }
       }
     }
   }, [modalState, getBlogById]);
+
+  // Update the toggleLike function
+  const toggleLike = async (blog, username) => {
+    if (!blog) return;
+    try {
+      const isLiked = await likeBlog(blog.id, username);
+      // Update the blog in state
+      setBlog((prev) => ({
+        ...prev,
+        liked: isLiked,
+        likeCount: isLiked
+          ? prev.likeCount + 1
+          : Math.max(0, prev.likeCount - 1),
+      }));
+      updateLikesInLocalStorage(blog.id, isLiked);
+      console.log("Updated like status:", isLiked);
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+    }
+  };
 
   useEffect(() => {
     // Also add safety check here
@@ -112,18 +134,18 @@ const BlogCommentsPage = () => {
     }
   };
 
-  const handleSubmitComment = async (blogId, userId) => {
+  const handleSubmitComment = async (blogId, username) => {
     if (editingCommentId) {
       const updatedCommentText = getCommentDraft(blogId);
       const { allHashtags } = await checkAndCreateHashtags(updatedCommentText);
       console.log("comment hashtags after editing: ", allHashtags);
-      await editComment(editingCommentId, blogId, userId);
+      await editComment(editingCommentId, blogId, username);
       setEditingCommentId(null);
     } else {
       const commentText = getCommentDraft(blogId);
       const { allHashtags } = await checkAndCreateHashtags(commentText);
       console.log("comment hashtags at first attempt: ", allHashtags);
-      await submitComment(blogId, userId);
+      await submitComment(blogId, username);
     }
   };
 
@@ -132,22 +154,6 @@ const BlogCommentsPage = () => {
       await removeComments(id);
     } catch (err) {
       console.error(id, " Error removing comment: ", err);
-    }
-  };
-
-  const toggleLike = async (blog, userId) => {
-    if (!blog) return;
-    try {
-      const isLiked = await likeBlog(blog._id, userId);
-      // Update the blog in state
-      setBlog((prev) => ({
-        ...prev,
-        liked: isLiked,
-      }));
-      updateLikesInLocalStorage(blog._id, isLiked);
-      console.log("Updated like status:", isLiked);
-    } catch (error) {
-      console.error("Failed to toggle like:", error);
     }
   };
 

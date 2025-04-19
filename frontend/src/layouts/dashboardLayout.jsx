@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import SearchDrawerContent from "../views/dashboard/blogs/SearchDrawerContent";
 import {
@@ -16,9 +16,10 @@ import {
   UserOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-import { Layout, Menu, Drawer, Button, Spin } from "antd";
+import { Layout, Menu, Drawer, Spin } from "antd";
 import MoreMenu from "../components/MoreMenu";
 import { useTheme } from "../context/ThemeContext";
+import { Outlet } from "react-router-dom";
 
 const { Sider, Content } = Layout;
 

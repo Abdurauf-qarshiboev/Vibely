@@ -1,7 +1,7 @@
 import React from "react";
-import AllBlogsTable from "@/views/dashboard/blogs/AllBlogsTable";
-import BlogCommentsPage from "@/views/dashboard/blogs/BlogCommentsPage";
-import { useTheme } from "@/context/ThemeContext";
+import AllBlogsTable from "../../views/dashboard/blogs/AllBlogsTable";
+import BlogCommentsPage from "../../views/dashboard/blogs/BlogCommentsPage";
+import { useTheme } from "../../context/ThemeContext";
 
 const DashboardPage = () => {
   const { theme } = useTheme();
@@ -16,7 +16,7 @@ const DashboardPage = () => {
         color: isDark ? "#f5f5f5" : "#000",
       }}
     >
-      <div className="flex-grow overflow-auto hide-scrollbar">
+      <div className="flex-grow overflow-auto hide-scrollbar pt-16 px-6">
         <AllBlogsTable />
       </div>
       <BlogCommentsPage />

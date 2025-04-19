@@ -1,54 +1,86 @@
-import {
-  HomeIcon,
-  DocumentDuplicateIcon,
-  UserIcon,
-  PlusCircleIcon,
-} from "@heroicons/react/24/outline";
-
-// Lazy loading components
-const DashboardPage = () => import("../../views/dashboard/DashboardPage");
-const MyBlogsPage = () => import("../../views/dashboard/MyBlogsPage");
-const CreateBlogs = () => import("../../views/dashboard/blogs/CreatePostsPage");
-const ProfilePage = () => import("../../views/dashboard/profile/ProfilePage");
-
+// Define the main menu routes with proper metadata
 export const mainMenu = [
   {
-    path: "",
-    name: "home",
-    component: DashboardPage,
+    path: '',
+    name: 'home',
     meta: {
-      title: "Home",
-      icon: HomeIcon,
-    },
+      title: 'Home',
+      requiresAuth: true,
+      icon: 'home'
+    }
   },
   {
-    path: "myblogs",
-    name: "myblogs",
-    component: MyBlogsPage,
+    path: 'explore',
+    name: 'explore',
     meta: {
-      title: "My posts",
-      icon: DocumentDuplicateIcon,
-    },
+      title: 'Explore',
+      requiresAuth: true,
+      icon: 'compass'
+    }
   },
   {
-    path: "createblogs",
-    name: "create-blogs",
-    component: CreateBlogs,
+    path: 'notifications',
+    name: 'notifications',
     meta: {
-      title: "Create post",
-      icon: PlusCircleIcon,
-    },
+      title: 'Notifications',
+      requiresAuth: true,
+      icon: 'bell'
+    }
   },
+  {
+    path: 'create',
+    name: 'create',
+    meta: {
+      title: 'Create Post',
+      requiresAuth: true,
+      icon: 'plus-square'
+    }
+  },
+  {
+    path: 'myblogs',
+    name: 'myblogs',
+    meta: {
+      title: 'My Posts',
+      requiresAuth: true,
+      icon: 'collection'
+    }
+  }
 ];
 
+// Define profile related routes
 export const profile = [
   {
-    path: "profile",
-    name: "profile",
-    component: ProfilePage,
+    path: 'profile',
+    name: 'profile',
     meta: {
-      title: "Profile",
-      icon: UserIcon,
-    },
+      title: 'Profile',
+      requiresAuth: true,
+      icon: 'user'
+    }
   },
+  {
+    path: 'settings',
+    name: 'settings',
+    meta: {
+      title: 'Settings',
+      requiresAuth: true,
+      icon: 'cog'
+    }
+  }
 ];
+
+// Extra routes for blog details
+export const blogRoutes = [
+  {
+    path: 'blogs/:id',
+    name: 'editBlog',
+    meta: {
+      title: 'Edit Post',
+      requiresAuth: true,
+      icon: 'pencil'
+    }
+  }
+];
+
+// Combine all routes for easy access
+export const allRoutes = [...mainMenu, ...profile, ...blogRoutes];

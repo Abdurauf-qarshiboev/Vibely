@@ -105,6 +105,7 @@ export const AuthProvider = ({ children }) => {
   const checkUser = async () => {
     try {
       const { data } = await api.get("auth/check-user");
+      sessionStorage.setItem("user", ...data)
       console.log(data);
       setUser({ ...data });
       setIsAuth(true);
