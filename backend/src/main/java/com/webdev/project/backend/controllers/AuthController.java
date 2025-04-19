@@ -6,12 +6,14 @@ import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.enums.UserRole;
 import com.webdev.project.backend.repositories.UserRepository;
 import com.webdev.project.backend.requests.RegistrationRequest;
+import com.webdev.project.backend.requests.UpdatePasswordRequest;
 import com.webdev.project.backend.responses.LoginSuccessResponse;
 import com.webdev.project.backend.services.CustomUserDetailsService;
 import com.webdev.project.backend.services.ImageService;
 import com.webdev.project.backend.utils.JwtUtils;
 import com.webdev.project.backend.requests.LoginRequest;
 import com.webdev.project.backend.utils.ResponseUtil;
+import io.micrometer.core.instrument.config.validate.ValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,6 +23,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import com.webdev.project.backend.services.UserService;
 import org.springframework.web.multipart.MultipartFile;
+import com.webdev.project.backend.utils.PasswordUtils;
 
 import java.util.Optional;
 
@@ -152,6 +155,69 @@ public class AuthController {
 
         } catch (Exception e) {
             return ResponseUtil.error("AUTH_005", "Authentication check failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/update-password")
+    public ResponseEntity<?> updatePassword(
+            @RequestBody UpdatePasswordRequest request,
+            @RequestHeader(value = "Authorization", required = true) String authHeader) {
+
+        try {
+            // Check if Authorization header exists and has the right format
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseUtil.error("AUTH_006", "Not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+
+            // Extract the token
+            String token = authHeader.substring(7);
+
+            // Validate token and extract username
+            String username = jwtUtils.extractUsername(token);
+            if (username == null || !jwtUtils.validateToken(token, username)) {
+                return ResponseUtil.error("AUTH_007", "Invalid or expired token", HttpStatus.UNAUTHORIZED);
+            }
+
+            // Load user details
+            Optional<User> userOptional = userRepository.findByUsername(username);
+            if (userOptional.isEmpty()) {
+                return ResponseUtil.error("AUTH_008", "User not found", HttpStatus.NOT_FOUND);
+            }
+
+            User user = userOptional.get();
+
+            // Verify old password
+            if (!PasswordUtils.validate(request.getOldPassword(), user.getPassword())) {
+                return ResponseUtil.error("AUTH_009", "Current password is incorrect", HttpStatus.BAD_REQUEST);
+            }
+
+            // Check if new password is different from old password
+            if (request.getOldPassword().equals(request.getNewPassword())) {
+                return ResponseUtil.error("AUTH_010", "New password must be different from current password", HttpStatus.BAD_REQUEST);
+            }
+
+            try {
+                // Update password (this will also validate password security)
+                user.setPassword(request.getNewPassword());
+                userRepository.save(user);
+            } catch (ValidationException e) {
+                return ResponseUtil.error("AUTH_011", e.getMessage(), HttpStatus.BAD_REQUEST);
+            }
+
+            // Generate new token with updated credentials
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            String newToken = jwtUtils.generateToken(userDetails.getUsername());
+
+            // Return success response with new token
+            LoginSuccessResponse response = new LoginSuccessResponse(newToken, new UserDTO(user));
+            ResponseEntity<LoginSuccessResponse> originalResponse = new ResponseEntity<>(response, HttpStatus.OK);
+
+            return ResponseUtil.success(originalResponse, "Password updated successfully");
+
+        } catch (BadCredentialsException e) {
+            return ResponseUtil.error("AUTH_012", "Authentication failed", HttpStatus.UNAUTHORIZED);
+        } catch (Exception e) {
+            return ResponseUtil.error("AUTH_013", "Password update failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
