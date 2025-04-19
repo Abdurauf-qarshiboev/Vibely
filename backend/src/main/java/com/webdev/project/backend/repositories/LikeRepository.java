@@ -25,4 +25,7 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 
     // Checks if the post is liked by a user
     boolean existsByPostIdAndUserId(Long postId, Long id);
+
+    // Cheks if the comment is liked by a user
+    boolean existsByCommentIdAndUserId(Long commentId, Long id);
 }

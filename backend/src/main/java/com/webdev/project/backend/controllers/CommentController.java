@@ -24,7 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 @RestController
 @RequestMapping("/api")
@@ -73,8 +74,10 @@ public class CommentController {
                 parentCommentId = commentRequest.getParent_comment_id();
             }
 
+            User user = currentUserOptional.get();
+
             Comment comment = commentService.addComment(currentUserOptional.get(), postOptional.get(), body, parentCommentId);
-            ResponseEntity<CommentDTO> responseEntity = new ResponseEntity<>(new CommentDTO(comment), HttpStatus.CREATED);
+            ResponseEntity<CommentDTO> responseEntity = new ResponseEntity<>(createCommentDTOWithLikeStatus(comment, user), HttpStatus.CREATED);
 
             return ResponseUtil.success(responseEntity, "Comment added successfully");
         } catch (ResourceNotFoundException e) {
@@ -89,12 +92,12 @@ public class CommentController {
             @PathVariable Long postId,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        User currentUser = null;
+        User currentUser;
         if (userDetails != null) {
             Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
-            if (currentUserOptional.isPresent()) {
-                currentUser = currentUserOptional.get();
-            }
+            currentUser = currentUserOptional.orElse(null);
+        } else {
+            currentUser = null;
         }
 
         Optional<Post> postOptional = postRepository.findById(postId);
@@ -111,12 +114,8 @@ public class CommentController {
         try {
             List<Comment> comments = commentService.getPostComments(post, null);
             List<CommentDTO> commentDTOs = comments.stream()
-                    .map(comment -> {
-                        CommentDTO dto = new CommentDTO(comment);
-                        // Here you would set liked_by_you if you had that functionality
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
+                    .map(comment -> createCommentDTOWithLikeStatus(comment, currentUser))
+                    .toList();
 
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("comments", commentDTOs);
@@ -134,12 +133,12 @@ public class CommentController {
             @PathVariable Long commentId,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        User currentUser = null;
+        User currentUser;
         if (userDetails != null) {
             Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
-            if (currentUserOptional.isPresent()) {
-                currentUser = currentUserOptional.get();
-            }
+            currentUser = currentUserOptional.orElse(null);
+        } else {
+            currentUser = null;
         }
 
         Optional<Comment> commentOptional = commentRepository.findById(commentId);
@@ -158,12 +157,8 @@ public class CommentController {
         try {
             List<Comment> replies = commentService.getCommentReplies(parentComment);
             List<CommentDTO> replyDTOs = replies.stream()
-                    .map(reply -> {
-                        CommentDTO dto = new CommentDTO(reply);
-                        // Here you would set liked_by_you if you had that functionality
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
+                    .map(comment -> createCommentDTOWithLikeStatus(comment, currentUser))
+                    .collect(toList());
 
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("replies", replyDTOs);
@@ -289,6 +284,18 @@ public class CommentController {
         } catch (Exception e) {
             return ResponseUtil.error("COMMENT_030", "Failed to unlike comment: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    // Helper method to retrieve like status of the user for the post
+    private CommentDTO createCommentDTOWithLikeStatus(Comment comment, User currentUser) {
+        CommentDTO commentDTO = new CommentDTO(comment);
+        try {
+            boolean isLiked = likeService.isCommentLikedByUser(comment.getId(), currentUser);
+            commentDTO.setLiked(isLiked);
+        } catch (Exception e) {
+            commentDTO.setLiked(false);
+        }
+        return commentDTO;
     }
 
 }

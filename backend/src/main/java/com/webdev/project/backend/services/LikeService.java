@@ -132,6 +132,18 @@ public class LikeService {
         }
     }
 
+    // Return CommentDTO with is_liked field
+    public boolean isCommentLikedByUser(Long commentId, User user) {
+        try {
+            Comment comment = commentRepository.findById(commentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+
+            return likeRepository.existsByCommentIdAndUserId(commentId, user.getId());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 
 
 

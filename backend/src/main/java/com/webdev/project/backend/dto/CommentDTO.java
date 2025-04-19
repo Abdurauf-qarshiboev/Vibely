@@ -11,6 +11,7 @@ public class CommentDTO {
     private Integer likeCount;
     private Integer replyCount;
     private UserDTO user;
+    private Boolean isLiked;
     private Timestamp created_at;
     private Timestamp updated_at;
 
@@ -21,6 +22,7 @@ public class CommentDTO {
         this.replyCount = comment.getCommentCount();
         this.user = new UserDTO(comment.getUser());
         this.created_at = comment.getCreatedAt();
+        this.isLiked = false;
     }
 
     public Long getId() {
@@ -49,5 +51,13 @@ public class CommentDTO {
 
     public Timestamp getUpdated_at() {
         return updated_at;
+    }
+
+    public Boolean getLiked() {
+        return isLiked;
+    }
+
+    public void setLiked(Boolean liked) {
+        isLiked = liked;
     }
 }
