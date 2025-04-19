@@ -119,6 +119,18 @@ public class LikeService {
         return likeRepository.findByComment(comment);
     }
 
+    public boolean isPostLikedByUser(Long postId, User user) {
+        try {
+            // First check if the post exists
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+
+            // Check if the user has liked this post
+            return likeRepository.existsByPostIdAndUserId(postId, user.getId());
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
 
 

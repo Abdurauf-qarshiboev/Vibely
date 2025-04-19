@@ -69,7 +69,9 @@ public class PostController {
 
             User user = userOptional.get();
             List<Post> posts = postService.getPostsByUser(user);
-            List<PostDTO> postDTOs = posts.stream().map(PostDTO::new).toList();
+            List<PostDTO> postDTOs = posts.stream()
+                    .map(post -> createPostDTOWithLikeStatus(post, user))
+                    .toList();
 
             ResponseEntity<List<PostDTO>> originalResponse = ResponseEntity.ok(postDTOs);
             return ResponseUtil.success(originalResponse, "Posts retrieved successfully");
@@ -89,7 +91,9 @@ public class PostController {
 
             User user = userOptional.get();
             List<Post> posts = postService.getMyPosts(user);
-            List<PostDTO> postDTOs = posts.stream().map(PostDTO::new).toList();
+            List<PostDTO> postDTOs = posts.stream()
+                    .map(post -> createPostDTOWithLikeStatus(post, user))
+                    .toList();
 
             ResponseEntity<List<PostDTO>> originalResponse = ResponseEntity.ok(postDTOs);
             return ResponseUtil.success(originalResponse, "Your posts retrieved successfully");
@@ -117,7 +121,7 @@ public class PostController {
                 return ResponseUtil.error("POST_008", "Post not found", HttpStatus.NOT_FOUND);
             }
 
-            ResponseEntity<PostDTO> originalResponse = ResponseEntity.ok(new PostDTO(postOptional.get()));
+            ResponseEntity<PostDTO> originalResponse = ResponseEntity.ok(createPostDTOWithLikeStatus(postOptional.get(), user));
             return ResponseUtil.success(originalResponse, "Post retrieved successfully");
         } catch (Exception e) {
             return ResponseUtil.error("POST_009", "Error retrieving post: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -155,7 +159,7 @@ public class PostController {
                 return ResponseUtil.error("POST_012", "Failed to update post", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            ResponseEntity<PostDTO> originalResponse = ResponseEntity.ok(new PostDTO(updated.get()));
+            ResponseEntity<PostDTO> originalResponse = ResponseEntity.ok(createPostDTOWithLikeStatus(post, user));
             return ResponseUtil.success(originalResponse, "Post updated successfully");
         } catch (Exception e) {
             return ResponseUtil.error("POST_013", "Error updating post: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -205,7 +209,7 @@ public class PostController {
             User user = userOptional.get();
             List<Post> feedPosts = postService.getFeedPosts(user);
             List<PostDTO> postDTOs = feedPosts.stream()
-                    .map(PostDTO::new)
+                    .map(post -> createPostDTOWithLikeStatus(post, user))
                     .toList();
 
             ResponseEntity<List<PostDTO>> originalResponse = ResponseEntity.ok(postDTOs);
@@ -289,9 +293,21 @@ public class PostController {
                 return ResponseUtil.error("POST_022", "At least one search parameter (q or hashtag) is required", HttpStatus.BAD_REQUEST);
             }
 
+            if (userDetails == null) {
+                return ResponseUtil.error("POST_025", "User not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+
+            Optional<User> userOptional = userService.findByUsername(userDetails.getUsername());
+
+            if (userOptional.isEmpty()) {
+                return ResponseUtil.error("POST_024", "User not found", HttpStatus.NOT_FOUND);
+            }
+
+            User user = userOptional.get();
+
             List<Post> matchedPosts = postService.searchPosts(query, hashtag);
             List<PostDTO> postDTOs = matchedPosts.stream()
-                    .map(PostDTO::new)
+                    .map(post -> createPostDTOWithLikeStatus(post, user))
                     .toList();
 
             ResponseEntity<List<PostDTO>> originalResponse = ResponseEntity.ok(postDTOs);
@@ -299,5 +315,17 @@ public class PostController {
         } catch (Exception e) {
             return ResponseUtil.error("POST_023", "Error searching posts: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    // Helper method to retrieve like status of the user for the post
+    private PostDTO createPostDTOWithLikeStatus(Post post, User currentUser) {
+        PostDTO postDTO = new PostDTO(post);
+        try {
+            boolean isLiked = likeService.isPostLikedByUser(post.getId(), currentUser);
+            postDTO.setLiked(isLiked);
+        } catch (Exception e) {
+            postDTO.setLiked(false);
+        }
+        return postDTO;
     }
 }

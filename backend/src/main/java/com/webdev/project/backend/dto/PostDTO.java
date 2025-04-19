@@ -18,6 +18,7 @@ public class PostDTO {
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
     private final List<String> hashtags;
+    private Boolean isLiked;
 
     public PostDTO(Post post) {
         this.id = post.getId();
@@ -34,6 +35,7 @@ public class PostDTO {
                 .stream()
                 .map(Hashtag::getName)
                 .toList();
+        this.isLiked = false;
     }
 
     public Long getId() { return id; }
@@ -47,4 +49,12 @@ public class PostDTO {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public List<String> getHashtags() { return hashtags; }
+
+    public Boolean getLiked() {
+        return isLiked;
+    }
+
+    public void setLiked(Boolean liked) {
+        this.isLiked = liked;
+    }
 }
