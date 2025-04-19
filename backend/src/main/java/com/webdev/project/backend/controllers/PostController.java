@@ -1,7 +1,7 @@
 package com.webdev.project.backend.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webdev.project.backend.dto.PostDTO;
-import com.webdev.project.backend.entities.Like;
 import com.webdev.project.backend.entities.Post;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
@@ -37,11 +37,15 @@ public class PostController {
 
     @PostMapping
     public ResponseEntity<?> createPost(
-            @RequestBody CreatePostRequest request,
+            @RequestParam("request") String requestJson,
             @RequestParam(value = "image", required = false) MultipartFile imageFile,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         try {
+            // Convert JSON string to CreatePostRequest object
+            ObjectMapper objectMapper = new ObjectMapper();
+            CreatePostRequest request = objectMapper.readValue(requestJson, CreatePostRequest.class);
+
             Optional<User> userOptional = userService.findByUsername(userDetails.getUsername());
 
             if (userOptional.isEmpty()) {
