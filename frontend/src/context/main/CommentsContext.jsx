@@ -1,12 +1,12 @@
 import { createContext, useState, useContext, useCallback } from "react";
 import { api, URL } from "@/helpers/api";
 import { message } from "antd";
-import { useBlogs } from "./BlogsContext";
+import { useBlogsContext } from "./BlogsContext";
 
 const CommentsContext = createContext();
 
 export function CommentsProvider({ children }) {
-  const { allBlogs } = useBlogs();
+  const { allBlogs } = useBlogsContext();
   const [commentDrafts, setCommentDrafts] = useState({});
 
   const getCommentDraft = useCallback(

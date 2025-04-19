@@ -20,8 +20,10 @@ const SignupPage = lazy(() => import("../views/auth/SignupPage"));
 // Dashboard pages
 const DashboardPage = lazy(() => import("../views/dashboard/DashboardPage"));
 const MyBlogsPage = lazy(() => import("../views/dashboard/MyBlogsPage"));
-const CreateBlogs = lazy(() => import("../views/dashboard/blogs/CreateBlogs"));
-const EditBlogs = lazy(() => import("../views/dashboard/blogs/EditBlogs"));
+const CreateBlogs = lazy(() =>
+  import("../views/dashboard/blogs/CreatePostsPage")
+);
+const EditBlogs = lazy(() => import("../views/dashboard/blogs/EditPost"));
 const ProfilePage = lazy(() =>
   import("../views/dashboard/profile/ProfilePage")
 );

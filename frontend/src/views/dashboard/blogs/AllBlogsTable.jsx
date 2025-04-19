@@ -2,15 +2,16 @@ import React, { useEffect, useState } from "react";
 import { Empty } from "antd";
 import { Splide, SplideSlide } from "@splidejs/react-splide";
 import "@splidejs/react-splide/css";
-import { useBlogs } from "../contexts/BlogsContext";
-import { useModal } from "../contexts/ModalContext";
-import { useComments } from "../contexts/CommentsContext";
-import { useHashtags } from "../contexts/HashtagsContext";
-import { URL } from "../utils/api";
+import { useBlogsContext } from "../../../context/main/BlogsContext";
+import { useModalContext } from "../../../context/main/ModalContext";
+import { useCommentsContext } from "../../../context/main/CommentsContext";
+import { useHashtagsContext } from "../../../context/main/HashtagsContext";
+import { useTheme } from "../../../context/ThemeContext";
+import { URL } from "../../../helpers/api";
 import {
   getLikesFromLocalStorage,
   updateLikesInLocalStorage,
-} from "../utils/localStorageUtils";
+} from "../../../utils/LocalStorageUtils";
 
 const options = {
   type: "fade",
@@ -18,10 +19,12 @@ const options = {
 };
 
 const AllBlogsTable = () => {
-  const { blogs, allBlogs, timeSince, likeBlog } = useBlogs();
-  const { setToggle } = useModal();
-  const { getCommentDraft, updateCommentDraft, submitComment } = useComments();
-  const { processedText, handleHashtagClick } = useHashtags();
+  const { blogs, allBlogs, timeSince, likeBlog } = useBlogsContext();
+  const { setToggle } = useModalContext();
+  const { getCommentDraft, updateCommentDraft, submitComment } = useCommentsContext();
+  const { processedText, handleHashtagClick } = useHashtagsContext();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [user, setUser] = useState({});
 
   useEffect(() => {
@@ -72,17 +75,30 @@ const AllBlogsTable = () => {
 
   // If no blogs to show
   if (blogs.data.length === 0) {
-    return <Empty description="Hozircha postlar mavjud emas..." />;
+    return (
+      <Empty
+        description={
+          <span style={{ color: isDark ? "#a8a8a8" : "#737373" }}>
+            No posts available yet...
+          </span>
+        }
+      />
+    );
   }
 
   return (
-    <div className="bg-white px-0 py-5 pb-16 sm:px-1">
+    <div
+      className={`px-0 py-5 pb-16 sm:px-1 ${isDark ? "bg-black" : "bg-white"}`}
+      data-theme={theme}
+    >
       <div className="rounded-lg p-0 mx-auto max-w-7xl">
         <div className="mx-auto grid max-w-[32rem] grid-cols-1 gap-x-8 gap-y-5">
           {blogs.data.map((blog) => (
             <article
               key={blog._id}
-              className="flex flex-col items-start justify-between"
+              className={`flex flex-col items-start justify-between ${
+                isDark ? "post-dark" : "post-light"
+              }`}
             >
               <div className="relative w-full pl-1 pb-2 flex items-center gap-x-2">
                 <a href="#">
@@ -93,8 +109,17 @@ const AllBlogsTable = () => {
                   />
                 </a>
                 <div className="flex items-center justify-center gap-1 text-sm leading-6">
-                  <p className="font-bold text-black">
-                    <a href="#" className="font-semibold text-black w-fit">
+                  <p
+                    className={`font-bold ${
+                      isDark ? "text-white" : "text-black"
+                    }`}
+                  >
+                    <a
+                      href="#"
+                      className={`font-semibold w-fit ${
+                        isDark ? "text-white" : "text-black"
+                      }`}
+                    >
                       {blog.userId?.name} {blog.userId?.lname}
                     </a>
                   </p>
@@ -177,12 +202,16 @@ const AllBlogsTable = () => {
                         d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z"
                       />
                     </svg>
-                    {blog.commentCount} ta izoh
+                    {blog.commentCount} comments
                   </button>
                 </div>
 
                 <div className="relative">
-                  <div className="mt-2 md:mt-3 text-sm sm:text-base font-semibold leading-5 text-black">
+                  <div
+                    className={`mt-2 md:mt-3 text-sm sm:text-base font-semibold leading-5 ${
+                      isDark ? "text-white" : "text-black"
+                    }`}
+                  >
                     {blog.title}
                   </div>
                   <div onClick={(e) => handleHashtagClick(e)}>
@@ -190,7 +219,9 @@ const AllBlogsTable = () => {
                       dangerouslySetInnerHTML={{
                         __html: processedText(blog.text),
                       }}
-                      className="mt-1 text-sm text-black"
+                      className={`mt-1 text-sm ${
+                        isDark ? "text-gray-300" : "text-black"
+                      }`}
                     ></p>
                   </div>
                 </div>
@@ -204,13 +235,17 @@ const AllBlogsTable = () => {
                 {blog.commentCount !== 0 && (
                   <div className="hidden sm:block md:mt-2 text-xs sm:text-sm w-fit text-gray-600">
                     <button onClick={() => openCommentsPage(blog._id, true)}>
-                      Barcha izohlarni ko`rish
+                      View all comments
                     </button>
                   </div>
                 )}
 
                 {/* Commenting section */}
-                <div className="hidden sm:flex mt-3 items-start space-x-4 border-b border-gray-200 pb-2">
+                <div
+                  className={`hidden sm:flex mt-3 items-start space-x-4 border-b pb-2 ${
+                    isDark ? "border-gray-800" : "border-gray-200"
+                  }`}
+                >
                   <div className="min-w-0 flex-1">
                     <form
                       onSubmit={(e) => {
@@ -223,7 +258,7 @@ const AllBlogsTable = () => {
                           htmlFor={`blogcomment-${blog._id}`}
                           className="sr-only"
                         >
-                          Izoh qoldirish
+                          Add a comment
                         </label>
                         <textarea
                           value={getCommentDraft(blog._id) || ""}
@@ -233,8 +268,12 @@ const AllBlogsTable = () => {
                           rows="2"
                           name={`blogcomment-${blog._id}`}
                           id={`blogcomment-${blog._id}`}
-                          className="block w-full resize-none border-0 border-transparent p-0 pr-10 text-gray-800 placeholder:text-gray-400 placeholder:text-sm focus:border-0 focus:ring-0 sm:text-sm sm:leading-6"
-                          placeholder="Izoh qoldirish..."
+                          className={`block w-full resize-none border-0 border-transparent p-0 pr-10 placeholder:text-sm focus:border-0 focus:ring-0 sm:text-sm sm:leading-6 ${
+                            isDark
+                              ? "bg-black text-gray-300 placeholder:text-gray-500"
+                              : "bg-white text-gray-800 placeholder:text-gray-400"
+                          }`}
+                          placeholder="Add a comment..."
                         />
                         <button
                           type="submit"

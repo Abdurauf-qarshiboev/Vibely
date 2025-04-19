@@ -1,7 +1,7 @@
 "use client";
 
-import { Link, Outlet } from "react-router-dom";
-import { useState, useRef } from "react";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
 import SearchDrawerContent from "../views/dashboard/blogs/SearchDrawerContent";
 import {
   HomeOutlined,
@@ -16,7 +16,7 @@ import {
   UserOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-import { Layout, Menu, Drawer, Button, Spin} from "antd";
+import { Layout, Menu, Drawer, Button, Spin } from "antd";
 import MoreMenu from "../components/MoreMenu";
 import { useTheme } from "../context/ThemeContext";
 
@@ -26,10 +26,28 @@ const DashboardLayout = () => {
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedKey, setSelectedKey] = useState("1");
 
   const moreButtonRef = useRef(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Set the selected key based on the current path
+  useEffect(() => {
+    if (location.pathname === "/" || location.pathname === "/dashboard") {
+      setSelectedKey("1");
+    } else if (location.pathname === "/explore") {
+      setSelectedKey("3");
+    } else if (location.pathname.includes("/notifications")) {
+      setSelectedKey("4");
+    } else if (location.pathname.includes("/create")) {
+      setSelectedKey("5");
+    } else if (location.pathname.includes("/profile")) {
+      setSelectedKey("6");
+    }
+  }, [location.pathname]);
 
   const showMoreMenu = () => {
     setMoreMenuVisible(true);
@@ -52,9 +70,21 @@ const DashboardLayout = () => {
   };
 
   const handleMenuClick = ({ key }) => {
-    if (key === "2") {
+    setSelectedKey(key);
+
+    if (key === "1") {
+      navigate("/");
+    } else if (key === "2") {
       // "Search" key
       showDrawer();
+    } else if (key === "3") {
+      navigate("/explore");
+    } else if (key === "4") {
+      navigate("/notifications");
+    } else if (key === "5") {
+      navigate("/create");
+    } else if (key === "6") {
+      navigate("/profile");
     }
   };
 
@@ -89,7 +119,7 @@ const DashboardLayout = () => {
           <Menu
             className="space-y-3"
             theme={isDark ? "dark" : "light"}
-            defaultSelectedKeys={["1"]}
+            selectedKeys={[selectedKey]}
             style={{
               fontSize: 16,
               backgroundColor: isDark ? "#000" : "#fff",
@@ -98,7 +128,12 @@ const DashboardLayout = () => {
             items={[
               {
                 key: "1",
-                icon: <HomeOutlined style={{ fontSize: 22 }} />,
+                icon:
+                  selectedKey === "1" ? (
+                    <HomeFilled style={{ fontSize: 22 }} />
+                  ) : (
+                    <HomeOutlined style={{ fontSize: 22 }} />
+                  ),
                 label: "Home",
               },
               {
@@ -108,22 +143,42 @@ const DashboardLayout = () => {
               },
               {
                 key: "3",
-                icon: <CompassOutlined style={{ fontSize: 22 }} />,
+                icon:
+                  selectedKey === "3" ? (
+                    <CompassFilled style={{ fontSize: 22 }} />
+                  ) : (
+                    <CompassOutlined style={{ fontSize: 22 }} />
+                  ),
                 label: "Explore",
               },
               {
                 key: "4",
-                icon: <BellOutlined style={{ fontSize: 22 }} />,
+                icon:
+                  selectedKey === "4" ? (
+                    <BellFilled style={{ fontSize: 22 }} />
+                  ) : (
+                    <BellOutlined style={{ fontSize: 22 }} />
+                  ),
                 label: "Notifications",
               },
               {
                 key: "5",
-                icon: <PlusSquareOutlined style={{ fontSize: 22 }} />,
+                icon:
+                  selectedKey === "5" ? (
+                    <PlusSquareFilled style={{ fontSize: 22 }} />
+                  ) : (
+                    <PlusSquareOutlined style={{ fontSize: 22 }} />
+                  ),
                 label: "Create",
               },
               {
                 key: "6",
-                icon: <UserOutlined style={{ fontSize: 22 }} />,
+                icon:
+                  selectedKey === "6" ? (
+                    <UserOutlined style={{ fontSize: 22 }} />
+                  ) : (
+                    <UserOutlined style={{ fontSize: 22 }} />
+                  ),
                 label: "Profile",
               },
             ]}
@@ -150,7 +205,10 @@ const DashboardLayout = () => {
         </Sider>
 
         <Layout style={{ backgroundColor: isDark ? "#000" : "#fff" }}>
-          <Content className="overflow-auto hide-scrollbar scroll-smooth">
+          <Content
+            className="overflow-auto hide-scrollbar scroll-smooth"
+            data-theme={theme}
+          >
             <Outlet />
           </Content>
         </Layout>
@@ -165,8 +223,7 @@ const DashboardLayout = () => {
         open={drawerOpen}
         onClose={closeDrawer}
         className={isDark ? "drawer-dark" : "drawer-light"}
-        data-theme={theme} // Add this attribute explicitly
-        // Remove background color inline style
+        data-theme={theme}
       >
         {loading ? (
           <div
@@ -179,7 +236,6 @@ const DashboardLayout = () => {
             <Spin size="large" />
           </div>
         ) : (
-          // The key prop forces a complete re-render when theme changes
           <SearchDrawerContent key={`search-drawer-${theme}`} />
         )}
       </Drawer>

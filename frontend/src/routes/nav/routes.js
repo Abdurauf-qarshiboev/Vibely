@@ -8,7 +8,7 @@ import {
 // Lazy loading components
 const DashboardPage = () => import("../../views/dashboard/DashboardPage");
 const MyBlogsPage = () => import("../../views/dashboard/MyBlogsPage");
-const CreateBlogs = () => import("../../views/dashboard/blogs/CreateBlogs");
+const CreateBlogs = () => import("../../views/dashboard/blogs/CreatePostsPage");
 const ProfilePage = () => import("../../views/dashboard/profile/ProfilePage");
 
 export const mainMenu = [

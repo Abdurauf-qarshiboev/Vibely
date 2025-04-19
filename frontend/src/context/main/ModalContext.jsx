@@ -1,53 +1,40 @@
-import { createContext, useState, useContext } from "react";
+import React, { createContext, useContext, useState } from "react";
 
+// Create the context
 const ModalContext = createContext();
 
-export function ModalProvider({ children }) {
-  const [toggle, setToggle] = useState(false);
-  const [id, setId] = useState(null);
-  const [searchToggle, setSearchToggleState] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+// Create a provider component
+export const ModalProvider = ({ children }) => {
+  // Initialize with default values to prevent undefined errors
+  const [modalState, setModalState] = useState({
+    toggle: false,
+    id: null,
+  });
 
-  const setToggleModal = (blogId, state) => {
-    setId(blogId);
-    setToggle(state);
-  };
-
-  const closeModal = () => {
-    setToggle(false);
-    setId(null);
-  };
-
-  const setSearchToggle = (state, query = "") => {
-    setSearchToggleState(state);
-    setSearchQuery(query);
-  };
-
-  const handleHashtagClick = (event) => {
-    const target = event.target;
-    if (target.tagName === "A" && target.classList.contains("hashtag-link")) {
-      const hashtag = target.textContent;
-      setSearchToggle(true, hashtag);
-      console.log("Searching for:", hashtag);
-    }
+  const setToggle = (id, state) => {
+    setModalState({
+      toggle: state,
+      id: id,
+    });
   };
 
   return (
-    <ModalContext.Provider
-      value={{
-        toggle,
-        id,
-        searchToggle,
-        searchQuery,
-        setToggle: setToggleModal,
-        closeModal,
-        setSearchToggle,
-        handleHashtagClick,
-      }}
-    >
+    <ModalContext.Provider value={{ modalState, setToggle }}>
       {children}
     </ModalContext.Provider>
   );
-}
+};
 
-export const useModalContext = () => useContext(ModalContext);
+// Create a custom hook to use the context
+export const useModalContext = () => {
+  const context = useContext(ModalContext);
+
+  if (!context) {
+    throw new Error("useModalContext must be used within a ModalProvider");
+  }
+
+  return context;
+};
+
+// For backwards compatibility if you have code using useModal
+export const useModal = useModalContext;

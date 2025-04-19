@@ -488,3 +488,58 @@ div[data-theme="light"] a {
 div[data-theme="dark"] a {
   color: #4b96ff !important;
 }
+
+/* Blog Post Styling */
+[data-theme="dark"] .post-dark {
+  color: #f5f5f5;
+}
+
+[data-theme="light"] .post-light {
+  color: #000;
+}
+
+/* Comments modal styling */
+[data-theme="dark"] .headlessui-dialog {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="light"] .headlessui-dialog {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Hashtag styling */
+[data-theme="dark"] a.hashtag {
+  color: #58a6ff !important;
+  text-decoration: none;
+}
+
+[data-theme="light"] a.hashtag {
+  color: #0095f6 !important;
+  text-decoration: none;
+}
+
+/* Blog text in dark mode */
+[data-theme="dark"] .blog-text {
+  color: #f5f5f5;
+}
+
+/* Blog comment areas in dark mode */
+[data-theme="dark"] textarea.comment-input {
+  background-color: #000;
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] textarea.comment-input::placeholder {
+  color: #737373;
+}
+
+/* Make sure dialogs have the correct theme */
+.headlessui-dialog[data-theme="dark"] .headlessui-dialog-panel {
+  background-color: #121212;
+  color: #f5f5f5;
+}
+
+.headlessui-dialog[data-theme="light"] .headlessui-dialog-panel {
+  background-color: #fff;
+  color: #000;
+}
