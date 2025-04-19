@@ -37,7 +37,7 @@ const ProfilePage = () => {
           postsCount: 0,
           followersCount: 135,
           followingCount: 642,
-          pronouns: "they/them",
+          pronouns: "he/him",
           links: [],
         });
 
@@ -89,23 +89,25 @@ const ProfilePage = () => {
           {/* Profile Image */}
           <div className="relative w-24 h-24 sm:w-32 sm:h-32 mb-4 sm:mb-0 sm:mr-8">
             {profileData.avatar ? (
-              <img
-                src={profileData.avatar}
-                alt={profileData.username}
-                className="w-full h-full rounded-full object-cover border-2 border-gray-200"
-              />
+              <div className="w-full h-full rounded-full overflow-hidden border border-1 border-gray-300">
+                <img
+                  src={profileData.avatar}
+                  alt={profileData.username}
+                  className="object-cover w-full h-full"
+                />
+              </div>
             ) : (
-              <div
+              <button
                 className={`w-full h-full rounded-full flex items-center justify-center ${
                   isDark ? "bg-gray-800" : "bg-gray-200"
                 }`}
               >
                 <UserIcon className="w-12 h-12 text-gray-500" />
-              </div>
+              </button>
             )}
 
             {isOwnProfile && (
-              <button className="absolute -bottom-2 right-0 rounded-full bg-blue-500 p-1">
+              <button className="absolute bottom-1 right-1 rounded-full bg-blue-500 p-1">
                 <PlusIcon className="w-5 h-5 text-white" />
               </button>
             )}
@@ -116,9 +118,9 @@ const ProfilePage = () => {
             {/* Username and Edit Profile */}
             <div className="flex flex-col sm:flex-row items-center sm:items-start mb-4">
               <div className="flex items-center mb-3 sm:mb-0">
-                <h1 className="text-xl font-semibold">
+                <div className="text-xl font-semibold">
                   {profileData.username}
-                </h1>
+                </div>
                 {profileData.verified && <VerifiedBadge className="ml-1" />}
               </div>
 
@@ -158,19 +160,19 @@ const ProfilePage = () => {
 
             {/* Stats */}
             <div className="flex justify-center sm:justify-start space-x-5 sm:space-x-8 mb-4">
-              <div className="flex flex-col items-center sm:items-start sm:flex-row sm:space-x-1">
+              <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
                 <span className="font-semibold">{profileData.postsCount}</span>
                 <span className="text-sm sm:text-base">posts</span>
               </div>
 
-              <div className="flex flex-col items-center sm:items-start sm:flex-row sm:space-x-1">
+              <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
                 <span className="font-semibold">
                   {profileData.followersCount}
                 </span>
                 <span className="text-sm sm:text-base">followers</span>
               </div>
 
-              <div className="flex flex-col items-center sm:items-start sm:flex-row sm:space-x-1">
+              <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
                 <span className="font-semibold">
                   {profileData.followingCount}
                 </span>
@@ -202,13 +204,13 @@ const ProfilePage = () => {
         {/* Story Highlights */}
         <div className="mt-6 flex space-x-4 overflow-x-auto pb-2">
           <div className="flex flex-col items-center">
-            <div
+            <button
               className={`w-16 h-16 rounded-full flex items-center justify-center border-2 ${
                 isDark ? "border-gray-700" : "border-gray-200"
               }`}
             >
               <PlusIcon className="w-8 h-8 text-gray-400" />
-            </div>
+            </button>
             <span className="text-xs mt-1">New</span>
           </div>
           {/* Add more story highlights here */}
