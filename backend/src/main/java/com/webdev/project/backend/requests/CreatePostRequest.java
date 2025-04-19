@@ -1,10 +1,12 @@
 package com.webdev.project.backend.requests;
 
+import java.util.List;
+
 public class CreatePostRequest {
     private String title;
     private String body;
     private Boolean isPrivate;
-    private String hashtags; // comma-separated string like: "sunset, travel"
+    private List<String> hashtags; // comma-separated string like: "sunset, travel"
 
     // Getters and Setters
     public String getTitle() {
@@ -31,11 +33,11 @@ public class CreatePostRequest {
         this.isPrivate = isPrivate;
     }
 
-    public String getHashtags() {
-        return hashtags != null ? hashtags.trim() : null;
+    public List<String> getHashtags() {
+        return hashtags;
     }
 
-    public void setHashtags(String hashtags) {
-        this.hashtags = hashtags != null ? hashtags.trim() : null;
+    public void setHashtags(List<String> hashtags) {
+        this.hashtags = hashtags;
     }
 }
