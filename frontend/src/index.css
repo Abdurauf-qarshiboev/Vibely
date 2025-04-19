@@ -122,6 +122,9 @@ body {
   transition: all 0.3s ease !important;
 }
 
+.ant-empty{
+  margin-top: 200px !important;
+}
 /* =====================================
    SEARCH DRAWER SPECIFIC STYLES
    ===================================== */
@@ -641,4 +644,29 @@ div[data-theme="dark"] a {
     width: 6px !important;
     height: 6px !important;
   }
+}
+
+/* For the comment modal carousel */
+.post-carousel .slick-track,
+.post-carousel .slick-slide,
+.post-carousel .slick-slide > div {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Additional style for the comment modal */
+.carousel-container.comment-modal {
+  background-color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Fix for images in the comment modal */
+.carousel-item img.object-contain {
+  max-height: 100%;
+  margin: 0 auto;
 }

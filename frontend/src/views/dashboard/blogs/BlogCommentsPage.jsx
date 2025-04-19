@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
@@ -7,20 +8,31 @@ import { useModalContext } from "@/context/main/ModalContext";
 import { useAuth } from "@/context/AuthContext";
 import { useHashtagsContext } from "@/context/main/HashtagsContext";
 import { useTheme } from "@/context/ThemeContext";
-import {
-  // eslint-disable-next-line no-unused-vars
-  getLikesFromLocalStorage,
-  updateLikesInLocalStorage,
-} from "../../../utils/LocalStorageUtils";
+import { updateLikesInLocalStorage } from "../../../utils/LocalStorageUtils";
 import { Menu } from "@headlessui/react";
-import { Splide, SplideSlide } from "@splidejs/react-splide";
-import { URL } from "../../../helpers/api";
+import { Carousel } from "antd";
+import { api } from "../../../helpers/api";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import VerifiedBadge from "../../../components/VerifiedBadge";
 
-// Options for Splide (carousel)
-const options = {
-  type: "fade",
-  rewind: true,
-};
+// Sample array of carousel images for posts
+const carouselImages = [
+  "https://images.unsplash.com/photo-1682687982107-14492010e05e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1682687220566-5599dbbebf11?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+];
+
+// Custom arrow components for the carousel
+const NextArrow = (props) => (
+  <div className="custom-arrow next-arrow" onClick={props.onClick}>
+    <RightOutlined style={{ color: "white", fontSize: "18px" }} />
+  </div>
+);
+
+const PrevArrow = (props) => (
+  <div className="custom-arrow prev-arrow" onClick={props.onClick}>
+    <LeftOutlined style={{ color: "white", fontSize: "18px" }} />
+  </div>
+);
 
 const BlogCommentsPage = () => {
   const { getBlogById, timeSince, likeBlog } = useBlogsContext();
@@ -43,6 +55,7 @@ const BlogCommentsPage = () => {
   const [open, setOpen] = useState(false);
   const [expandedComments, setExpandedComments] = useState([]);
   const [editingCommentId, setEditingCommentId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // Refs
   const textareaRef = useRef(null);
@@ -50,38 +63,66 @@ const BlogCommentsPage = () => {
   useEffect(() => {
     // Add null check for modalState
     if (modalState && modalState.id) {
-      const currentBlog = getBlogById(modalState.id);
-      if (currentBlog) {
-        setBlog(currentBlog);
-        if (currentBlog.comments) {
-          setComments(
-            currentBlog.comments.map((comment) => ({
-              ...comment,
-              isTruncated: comment.text.length > 200,
-            }))
-          );
-        } else {
-          setComments([]); // Set empty array if no comments
+      const fetchData = async () => {
+        try {
+          setLoading(true);
+          // Get blog details
+          const currentBlog = getBlogById(modalState.id);
+
+          if (currentBlog) {
+            setBlog(currentBlog);
+
+            // Fetch comments for this post
+            const response = await api.get(`/posts/${modalState.id}/comments`);
+
+            if (response.data && response.data.success) {
+              // Map comments with expanded state
+              setComments(
+                response.data.data.comments.map((comment) => ({
+                  ...comment,
+                  isTruncated: comment.body?.length > 200,
+                }))
+              );
+            } else {
+              setComments([]);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching comments:", err);
+          setComments([]);
+        } finally {
+          setLoading(false);
         }
-      }
+      };
+
+      fetchData();
     }
   }, [modalState, getBlogById]);
 
   // Update the toggleLike function
-  const toggleLike = async (blog, username) => {
+  const toggleLike = async (blog) => {
     if (!blog) return;
     try {
-      const isLiked = await likeBlog(blog.id, username);
+      // Call API based on new liked status
+      if (!blog.liked) {
+        // If the post wasn't liked, like it now
+        await api.post(`posts/${blog.id}/like`);
+      } else {
+        // If the post was liked, unlike it now
+        await api.delete(`posts/${blog.id}/unlike`);
+      }
+
       // Update the blog in state
       setBlog((prev) => ({
         ...prev,
-        liked: isLiked,
-        likeCount: isLiked
-          ? prev.likeCount + 1
-          : Math.max(0, prev.likeCount - 1),
+        liked: !prev.liked,
+        likeCount: prev.liked
+          ? Math.max(0, prev.likeCount - 1)
+          : prev.likeCount + 1,
       }));
-      updateLikesInLocalStorage(blog.id, isLiked);
-      console.log("Updated like status:", isLiked);
+
+      updateLikesInLocalStorage(blog.id, !blog.liked);
+      console.log("Updated like status:", !blog.liked);
     } catch (error) {
       console.error("Failed to toggle like:", error);
     }
@@ -126,32 +167,51 @@ const BlogCommentsPage = () => {
   };
 
   const handleEditComment = async (commentId) => {
-    const data = await getComment(commentId);
-    console.log(data?.text);
-    if (data) {
-      setEditingCommentId(data._id);
-      updateCommentDraft(blog._id, data.text);
+    const commentToEdit = comments.find((c) => c.id === commentId);
+    if (commentToEdit) {
+      setEditingCommentId(commentId);
+      updateCommentDraft(blog.id, commentToEdit.body);
+      focusTextarea();
     }
   };
 
   const handleSubmitComment = async (blogId, username) => {
-    if (editingCommentId) {
-      const updatedCommentText = getCommentDraft(blogId);
-      const { allHashtags } = await checkAndCreateHashtags(updatedCommentText);
-      console.log("comment hashtags after editing: ", allHashtags);
-      await editComment(editingCommentId, blogId, username);
-      setEditingCommentId(null);
-    } else {
-      const commentText = getCommentDraft(blogId);
-      const { allHashtags } = await checkAndCreateHashtags(commentText);
-      console.log("comment hashtags at first attempt: ", allHashtags);
-      await submitComment(blogId, username);
+    try {
+      if (editingCommentId) {
+        const updatedCommentText = getCommentDraft(blogId);
+        const { allHashtags } = await checkAndCreateHashtags(
+          updatedCommentText
+        );
+        console.log("comment hashtags after editing: ", allHashtags);
+        await editComment(editingCommentId, blogId, username);
+        setEditingCommentId(null);
+      } else {
+        const commentText = getCommentDraft(blogId);
+        const { allHashtags } = await checkAndCreateHashtags(commentText);
+        console.log("comment hashtags at first attempt: ", allHashtags);
+        await submitComment(blogId, username);
+      }
+
+      // Refresh comments after submitting
+      const response = await api.get(`/posts/${blogId}/comments`);
+      if (response.data && response.data.success) {
+        setComments(
+          response.data.data.comments.map((comment) => ({
+            ...comment,
+            isTruncated: comment.body?.length > 200,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error submitting comment:", error);
     }
   };
 
   const handleRemoveComment = async (id) => {
     try {
       await removeComments(id);
+      // Remove comment from local state
+      setComments(comments.filter((comment) => comment.id !== id));
     } catch (err) {
       console.error(id, " Error removing comment: ", err);
     }
@@ -167,7 +227,7 @@ const BlogCommentsPage = () => {
     <Transition.Root show={open} as={React.Fragment}>
       <Dialog
         as="div"
-        className="relative z-10"
+        className="relative z-50"
         onClose={close}
         data-theme={theme}
       >
@@ -180,7 +240,11 @@ const BlogCommentsPage = () => {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-70 transition-opacity" />
+          <div
+            className={`${
+              isDark ? "bg-black" : "bg-white"
+            },"fixed inset-0 bg-opacity-70 transition-opacity"`}
+          />
         </Transition.Child>
 
         <div
@@ -188,17 +252,17 @@ const BlogCommentsPage = () => {
             open ? "" : "hidden"
           }`}
         >
-          <div className="absolute right-0 top-0 pr-3 pt-3">
+          <div className="absolute right-3 top-5 pr-3 pt-3">
             <button
               type="button"
-              className="rounded-md bg-transparent text-white focus:outline-none focus:ring-0 focus:ring-none focus:ring-offset-0"
+              className={`"rounded-md bg-transparent ${isDark ? "text-white" : "text-black"} focus:outline-none focus:ring-0 focus:ring-none focus:ring-offset-0"`}
               onClick={close}
             >
               <span className="sr-only">Close</span>
-              <XMarkIcon className="size-7" aria-hidden="true" />
+              <XMarkIcon className="size-7 font-bold"  />
             </button>
           </div>
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0 ">
             <Transition.Child
               as={React.Fragment}
               enter="ease-out duration-300"
@@ -209,42 +273,40 @@ const BlogCommentsPage = () => {
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <Dialog.Panel
-                className={`relative transform overflow-hidden shadow-xl transition-all my-auto flex min-h-[20rem] sm:min-h-[30rem] md:min-h-[48rem] max-h-[54rem] sm:w-[calc(100%-64px-64px)] mx-auto max-w-[80rem] rounded ${
-                  isDark ? "bg-gray-900" : "bg-white"
-                }`}
+                className={`relative transform overflow-hidden shadow-xl transition-all my-auto flex min-h-[20rem] sm:min-h-[30rem] md:min-h-[48rem] max-h-[54rem] sm:w-[calc(100%-64px-64px)] mx-auto max-w-[80rem] rounded border border-1 ${
+                  isDark ? "border-white/10" : "shadow-md"
+                }  ${isDark ? "bg-black" : "bg-white"}`}
               >
                 {/* Left side - Images */}
-                <div className="flex flex-col items-center justify-center max-w-[45rem] w-full lg:w-100 bg-black rounded-l">
+                <div
+                  className={` ${
+                    isDark ? "bg-black" : "bg-transparent"
+                  }"flex flex-col items-center justify-center max-w-[45rem] w-full lg:w-100"`}
+                >
                   <div className="grid place-content-center w-full h-full">
-                    <Splide
-                      className="w-full h-full"
-                      options={{
-                        ...options,
-                        arrows: blog.image?.length > 1,
-                        pagination: blog.image?.length > 1,
-                      }}
-                      aria-label="My Favorite Images"
-                    >
-                      {blog.image && blog.image.length > 0 ? (
-                        blog.image.map((img, index) => (
-                          <SplideSlide key={index}>
-                            <img
-                              src={`${URL}/${img.response}`}
-                              alt=""
-                              className="bg-transparent object-contain w-full h-auto"
-                            />
-                          </SplideSlide>
-                        ))
-                      ) : (
-                        <SplideSlide className="h-[18rem] aspect-[18/20]">
-                          <img
-                            src="/images/notfound.png" // Update path as needed
-                            alt="Placeholder Image"
-                            className="w-full h-full sm:rounded bg-gray-100 object-cover"
-                          />
-                        </SplideSlide>
-                      )}
-                    </Splide>
+                    {/* Ant Design Carousel instead of Splide */}
+                    <div className="carousel-container w-full h-full overflow-hidden">
+                      <Carousel
+                        arrows
+                        nextArrow={<NextArrow />}
+                        prevArrow={<PrevArrow />}
+                        dots={{ className: "custom-dots" }}
+                        className="post-carousel"
+                      >
+                        {carouselImages.map((image, index) => (
+                          <div key={index} className="carousel-item">
+                            <div className="aspect-square w-full">
+                              <img
+                                src={image}
+                                alt={`Post image ${index + 1}`}
+                                className="object-contain w-full h-full"
+                                loading="lazy"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </Carousel>
+                    </div>
                   </div>
                 </div>
 
@@ -252,61 +314,79 @@ const BlogCommentsPage = () => {
                 <div className="relative hidden flex-1 lg:min-w-[25rem] min-w-[21rem] md:min-w-[23rem] sm:flex flex-col items-start justify-center pt-2">
                   {/* User info */}
                   <div
-                    className={`w-full flex items-center gap-x-3 mb-2 lg:mb-3 px-3 lg:px-4 py-1 ${
-                      isDark ? "border-gray-700" : "border-gray-200"
-                    }`}
+                    className={`w-full flex items-center gap-x-3 mb-2 lg:mb-3 px-3 lg:px-4 py-1`}
                   >
                     <img
-                      src="https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                      src={
+                        blog.user?.avatar ||
+                        "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                      }
                       alt=""
-                      className="size-9 rounded-full bg-gray-100"
+                      className="size-9 rounded-full bg-gray-100 cursor-pointer"
                     />
-                    <div className="flex items-center justify-center gap-1 text-sm leading-6">
-                      <a
-                        href="#"
-                        className={`font-semibold leading-5 text-sm ${
-                          isDark
-                            ? "text-white hover:text-gray-300"
-                            : "hover:text-gray-500"
+                    <div className="flex items-center justify-center gap-1 text-sm leading-6 cursor-pointer">
+                      <span
+                        className={`font-bold flex items-center gap-1 ${
+                          isDark ? "text-white" : "text-black"
                         }`}
                       >
-                        {blog.userId?.name} {blog.userId?.lname}
-                      </a>
+                        <a
+                          href="#"
+                          className={`font-semibold leading-5 text-sm ${
+                            isDark
+                              ? "text-white hover:text-gray-300"
+                              : "hover:text-gray-700"
+                          }`}
+                        >
+                          {blog.user?.username}
+                        </a>
+                        {blog.user?.verified && <VerifiedBadge />}
+                        {/* temporary badge */}
+                        <VerifiedBadge />
+                      </span>
                     </div>
                   </div>
 
                   {/* Comments section */}
                   <div
                     className={`flex-1 w-full overflow-y-auto p-3 lg:p-4 border-b border-t ${
-                      isDark ? "border-gray-700" : "border-gray-200"
+                      isDark ? "border-white/30" : "border-black/10"
                     } scrollbar-hidden`}
                   >
                     {/* Blog text */}
                     <div className="flex gap-x-3 pb-2 lg:pb-3">
                       <a href="#" className="size-8 flex-none">
                         <img
-                          src="https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                          src={
+                            blog.user?.avatar ||
+                            "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                          }
                           alt=""
-                          className="rounded-full bg-gray-100"
+                          className="rounded-full bg-gray-100  cursor-pointer"
                         />
                       </a>
                       <div className="flex-auto">
                         <div className="flex items-baseline justify-between gap-x-3 text-sm">
-                          <a
-                            href="#"
-                            className={`font-semibold leading-5 text-sm ${
-                              isDark
-                                ? "text-white hover:text-gray-300"
-                                : "hover:text-gray-500"
-                            }`}
-                          >
-                            {blog.userId?.name} {blog.userId?.lname}
-                          </a>
+                          <span className="flex items-center gap-1 cursor-pointer">
+                            <a
+                              href="#"
+                              className={`font-semibold leading-5 text-sm ${
+                                isDark
+                                  ? "text-white hover:text-gray-300"
+                                  : "hover:text-gray-700"
+                              }`}
+                            >
+                              {blog.user?.username}
+                            </a>
+                            {blog.user?.verified && <VerifiedBadge />}
+                            {/* temporary badge */}
+                            <VerifiedBadge />
+                          </span>
                         </div>
-                        <div onClick={handleHashtagClick}>
+                        <div>
                           <div
                             dangerouslySetInnerHTML={{
-                              __html: processedText(blog.text),
+                              __html: processedText(blog.body || ""),
                             }}
                             className={`text-sm leading-5 text-left ${
                               isDark ? "text-gray-300" : "text-black"
@@ -320,26 +400,33 @@ const BlogCommentsPage = () => {
                     <ul role="list" className="h-auto">
                       {comments.map((comment) => (
                         <li
-                          key={comment._id}
+                          key={comment.id}
                           className="flex gap-x-3 lg:py-3 py-2"
                         >
                           <a href="#" className="size-8 flex-none">
                             <img
                               className="rounded-full bg-gray-50"
-                              src="https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                              src={
+                                comment.user?.avatar ||
+                                "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                              }
                               alt=""
                             />
                           </a>
                           <div className="flex-auto">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center justify-start gap-x-2">
-                                <div
-                                  className={`text-sm font-semibold leading-5 hover:text-gray-500 cursor-pointer ${
-                                    isDark ? "text-white" : "text-black"
-                                  }`}
-                                >
-                                  {comment.from.name} {comment.from.lname}
-                                </div>
+                                <span className="flex items-center gap-1">
+                                  <div
+                                    className={`text-sm font-semibold leading-5 hover:text-gray-500 cursor-pointer ${
+                                      isDark ? "text-white" : "text-black"
+                                    }`}
+                                  >
+                                    {comment.user?.firstName}{" "}
+                                    {comment.user?.lastName}
+                                  </div>
+                                  {comment.user?.verified && <VerifiedBadge />}
+                                </span>
                               </div>
                             </div>
                             <div
@@ -352,12 +439,12 @@ const BlogCommentsPage = () => {
                               >
                                 <p
                                   dangerouslySetInnerHTML={{
-                                    __html: processedText(comment.text),
+                                    __html: processedText(comment.body || ""),
                                   }}
                                   className={`text-sm text-left w-full leading-5 ${
                                     isDark ? "text-gray-300" : "text-black"
                                   } ${
-                                    expandedComments.includes(comment._id)
+                                    expandedComments.includes(comment.id)
                                       ? "line-clamp-none"
                                       : "line-clamp-4"
                                   }`}
@@ -366,7 +453,7 @@ const BlogCommentsPage = () => {
                               {comment.isTruncated && (
                                 <button
                                   onClick={() =>
-                                    toggleCommentExpansion(comment._id)
+                                    toggleCommentExpansion(comment.id)
                                   }
                                   className={`w-fit mt-1 font-semibold text-xs ${
                                     isDark
@@ -374,7 +461,7 @@ const BlogCommentsPage = () => {
                                       : "text-gray-500 hover:text-gray-700"
                                   }`}
                                 >
-                                  {expandedComments.includes(comment._id)
+                                  {expandedComments.includes(comment.id)
                                     ? "(Read less)"
                                     : "(Read more)"}
                                 </button>
@@ -386,9 +473,9 @@ const BlogCommentsPage = () => {
                                   isDark ? "text-gray-400" : "text-gray-600"
                                 }`}
                               >
-                                {timeSince(comment.createdAt)}
+                                {timeSince(comment.created_at)}
                               </div>
-                              {comment.from._id === user._id && (
+                              {comment.user?.username === user.username && (
                                 <Menu as="div" className="relative flex-none">
                                   <Menu.Button
                                     className={`block ${
@@ -419,10 +506,9 @@ const BlogCommentsPage = () => {
                                       <Menu.Item>
                                         {({ active }) => (
                                           <button
-                                            onClick={() => {
-                                              handleEditComment(comment._id);
-                                              focusTextarea();
-                                            }}
+                                            onClick={() =>
+                                              handleEditComment(comment.id)
+                                            }
                                             className={`
                                               flex items-center justify-between px-0 py-1 text-sm leading-6 text-yellow-600 w-full text-left
                                               ${
@@ -450,7 +536,7 @@ const BlogCommentsPage = () => {
                                               />
                                             </svg>
                                             <span className="sr-only">
-                                              , {comment._id}
+                                              , {comment.id}
                                             </span>
                                           </button>
                                         )}
@@ -459,7 +545,7 @@ const BlogCommentsPage = () => {
                                         {({ active }) => (
                                           <button
                                             onClick={() =>
-                                              handleRemoveComment(comment._id)
+                                              handleRemoveComment(comment.id)
                                             }
                                             className={`
                                               px-0 py-1 text-sm leading-6 text-red-700 flex items-center justify-between w-full text-left
@@ -488,7 +574,7 @@ const BlogCommentsPage = () => {
                                               />
                                             </svg>
                                             <span className="sr-only">
-                                              {comment._id}
+                                              {comment.id}
                                             </span>
                                           </button>
                                         )}
@@ -509,7 +595,7 @@ const BlogCommentsPage = () => {
                     {/* Like and comment buttons */}
                     <div className="w-full flex items-center gap-x-2 text-sm mt-1 px-3 lg:px-4 py-1">
                       <button
-                        onClick={() => toggleLike(blog, user._id)}
+                        onClick={() => toggleLike(blog)}
                         className="relative z-10 rounded-full flex items-center justify-center gap-1 text-red-500"
                       >
                         <svg
@@ -577,7 +663,7 @@ const BlogCommentsPage = () => {
                         <form
                           onSubmit={(e) => {
                             e.preventDefault();
-                            handleSubmitComment(blog._id, user._id);
+                            handleSubmitComment(blog.id, user.username);
                           }}
                         >
                           <div className="relative">
@@ -585,9 +671,9 @@ const BlogCommentsPage = () => {
                               Add a comment
                             </label>
                             <textarea
-                              value={getCommentDraft(blog._id) || ""}
+                              value={getCommentDraft(blog.id) || ""}
                               onChange={(e) =>
-                                updateCommentDraft(blog._id, e.target.value)
+                                updateCommentDraft(blog.id, e.target.value)
                               }
                               rows="2"
                               name="comment"
