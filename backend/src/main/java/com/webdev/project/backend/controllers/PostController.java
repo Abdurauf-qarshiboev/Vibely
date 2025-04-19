@@ -38,7 +38,7 @@ public class PostController {
     @PostMapping
     public ResponseEntity<?> createPost(
             @RequestParam("request") String requestJson,
-            @RequestParam(value = "image", required = false) MultipartFile imageFile,
+            @RequestParam(value = "image", required = false) List<MultipartFile> imageFiles,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         try {
@@ -53,7 +53,7 @@ public class PostController {
             }
 
             User user = userOptional.get();
-            Post post = postService.createPost(request, imageFile, user);
+            Post post = postService.createPost(request, imageFiles, user);
 
             ResponseEntity<PostDTO> originalResponse = ResponseEntity.status(HttpStatus.CREATED).body(new PostDTO(post));
             return ResponseUtil.success(originalResponse, "Post created successfully");

@@ -5,7 +5,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -28,20 +30,20 @@ public class Post {
     )
     private Set<Hashtag> hashtags = new HashSet<>();
 
-
-
     private String title;
 
     @Column(columnDefinition = "TEXT")
     private String body;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "post_id")
+    private List<PostImage> images = new ArrayList<>();
 
     @Column(name = "like_count")
     private Integer likeCount = 0;
 
     @Column(name = "comment_count")
     private Integer commentCount = 0;
-
-    private String image;
 
     @Column(name = "is_private")
     private Boolean isPrivate;
@@ -60,7 +62,6 @@ public class Post {
         this.user = user;
         this.title = title;
         this.body = body;
-        this.image = image;
         this.isPrivate = isPrivate;
         this.likeCount = 0;
         this.commentCount = 0;
@@ -110,14 +111,6 @@ public class Post {
         this.commentCount = commentCount;
     }
 
-    public String getImage() {
-        return image;
-    }
-
-    public void setImage(String image) {
-        this.image = image;
-    }
-
     public Boolean getPrivate() {
         return isPrivate;
     }
@@ -140,5 +133,13 @@ public class Post {
 
     public void setHashtags(Set<Hashtag> hashtags) {
         this.hashtags = hashtags;
+    }
+
+    public List<PostImage> getImages() {
+        return images;
+    }
+
+    public void setImages(List<PostImage> images) {
+        this.images = images;
     }
 }

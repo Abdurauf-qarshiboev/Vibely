@@ -104,8 +104,7 @@ public class AuthController {
             // Handle avatar upload if provided
             if (avatarFile != null && !avatarFile.isEmpty()) {
                 String fileName = imageService.saveImage(avatarFile);
-                String avatarUrl = imageService.getImageUrl(fileName);
-                user.setAvatar(avatarUrl);
+                user.setAvatar(fileName);
             }
 
             // Create the user in DB

@@ -2,7 +2,7 @@ package com.webdev.project.backend.dto;
 
 import com.webdev.project.backend.entities.Hashtag;
 import com.webdev.project.backend.entities.Post;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import com.webdev.project.backend.entities.PostImage;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,7 +14,7 @@ public class PostDTO {
     private final String body;
     private final Integer likeCount;
     private final Integer commentCount;
-    private final String image;
+    private final List<String> images;
     private final Boolean isPrivate;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
@@ -36,19 +36,10 @@ public class PostDTO {
                 .map(Hashtag::getName)
                 .toList();
         this.isLiked = false;
-
-        // Convert image to URL
-        String image;
-        if (post.getImage() != null && !post.getImage().isEmpty()) {
-            image = ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/api/images/")
-                    .path(post.getImage())
-                    .toUriString();
-        } else {
-            image = null;
-        }
-
-        this.image = image;
+        this.images = post.getImages()
+                .stream()
+                .map(PostImage::getImageUrl)
+                .toList();
     }
 
     public Long getId() { return id; }
@@ -57,7 +48,7 @@ public class PostDTO {
     public String getBody() { return body; }
     public Integer getLikeCount() { return likeCount; }
     public Integer getCommentCount() { return commentCount; }
-    public String getImage() { return image; }
+    public List<String> getImages() { return images; }
     public Boolean getPrivate() { return isPrivate; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
