@@ -1,10 +1,12 @@
 package com.webdev.project.backend.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webdev.project.backend.dto.UserDTO;
 import com.webdev.project.backend.dto.UserExtendedDTO;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.requests.UserUpdateRequest;
 import com.webdev.project.backend.services.FollowService;
+import com.webdev.project.backend.services.ImageService;
 import com.webdev.project.backend.services.UserService;
 import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.Optional;
 
 @RestController
@@ -23,11 +27,13 @@ public class UserController {
 
     private final UserService userService;
     private final FollowService followService;
+    private final ImageService imageService;
 
     @Autowired
-    public UserController(UserService userService, FollowService followService) {
+    public UserController(UserService userService, FollowService followService, ImageService imageService) {
         this.userService = userService;
         this.followService = followService;
+        this.imageService = imageService;
     }
 
     // Get user by username
@@ -59,7 +65,8 @@ public class UserController {
     @PutMapping("/profile")
     public ResponseEntity<?> updateUser(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody UserUpdateRequest request) {
+            @RequestParam("request") String requestJson,
+            @RequestParam(value = "avatar", required = false) MultipartFile avatarFile) {
 
         try {
             Optional<User> userOptional = userService.findByUsername(userDetails.getUsername());
@@ -67,6 +74,10 @@ public class UserController {
             if (userOptional.isEmpty()) {
                 return ResponseUtil.error("UU_002", "User profile is not found", HttpStatus.NOT_FOUND);
             }
+
+            // Convert JSON string to CreatePostRequest object
+            ObjectMapper objectMapper = new ObjectMapper();
+            UserUpdateRequest request = objectMapper.readValue(requestJson, UserUpdateRequest.class);
 
             User user = userOptional.get();
 
@@ -80,6 +91,12 @@ public class UserController {
             if (request.isPrivate() != null) user.setPrivate(request.isPrivate());
             if (request.isVerified() != null) user.setVerified(request.isVerified());
 
+            // Handle avatar upload if provided
+            if (avatarFile != null && !avatarFile.isEmpty()) {
+                String fileName = imageService.saveImage(avatarFile);
+                user.setAvatar(fileName);
+            }
+
             User updatedUser = userService.updateUser(user);
 
             return ResponseUtil.success(
@@ -91,6 +108,4 @@ public class UserController {
         }
 
     }
-
-    // TODO: Implement "Get User Posts" when Post is ready
 }
