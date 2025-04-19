@@ -35,14 +35,14 @@ public class User {
     @Column(nullable = false, unique = true)
     private String phone;
 
-    @Column(nullable = false, columnDefinition="VARCHAR(20) DEFAULT 'USER'")
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private UserRole role;
+    private UserRole role = UserRole.USER;
 
-    @Column(columnDefinition="BOOLEAN DEFAULT false")
-    private Boolean is_private;
-    @Column(columnDefinition="BOOLEAN DEFAULT false")
-    private Boolean is_verified;
+    @Column(nullable = false)
+    private Boolean is_private = false;
+    @Column(nullable = false)
+    private Boolean is_verified = false;
 
     @CreationTimestamp
     private Timestamp created_at;

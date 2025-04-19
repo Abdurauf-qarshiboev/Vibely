@@ -10,7 +10,6 @@ import com.webdev.project.backend.requests.CreatePostRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,12 +21,14 @@ public class PostService {
     private final UserRepository userRepository;
     private final HashtagService hashtagService;
     private final HashtagRepository hashtagRepository;
+    private final ImageService imageService;
 
-    public PostService(PostRepository postRepository, UserRepository userRepository, HashtagService hashtagService, HashtagRepository hashtagRepository) {
+    public PostService(PostRepository postRepository, UserRepository userRepository, HashtagService hashtagService, HashtagRepository hashtagRepository, ImageService imageService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.hashtagService = hashtagService;
         this.hashtagRepository = hashtagRepository;
+        this.imageService = imageService;
     }
 
     public Post createPost(CreatePostRequest request, MultipartFile imageFile, User currentUser) {
@@ -36,7 +37,19 @@ public class PostService {
         post.setTitle(request.getTitle());
         post.setBody(request.getBody());
         post.setPrivate(Boolean.TRUE.equals(request.getIsPrivate()));
-        post.setImage(null); // Image handling can be implemented later
+
+        // Use ImageService to handle image
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                String imagePath = imageService.saveImage(imageFile);
+                post.setImage(imagePath);
+            } catch (Exception e) {
+                // Log error but continue with post creation
+                System.err.println("Failed to process image: " + e.getMessage());
+            }
+        } else {
+            post.setImage(null);
+        }
 
         // Process hashtags
         List<String> parsedHashtags = request.getHashtags();

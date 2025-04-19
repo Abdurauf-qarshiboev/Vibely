@@ -2,6 +2,7 @@ package com.webdev.project.backend.dto;
 
 import com.webdev.project.backend.entities.Hashtag;
 import com.webdev.project.backend.entities.Post;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,7 +28,6 @@ public class PostDTO {
         this.body = post.getBody();
         this.likeCount = post.getLikeCount();
         this.commentCount = post.getCommentCount();
-        this.image = post.getImage();
         this.isPrivate = post.getPrivate();
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
@@ -36,6 +36,19 @@ public class PostDTO {
                 .map(Hashtag::getName)
                 .toList();
         this.isLiked = false;
+
+        // Convert image to URL
+        String image;
+        if (post.getImage() != null && !post.getImage().isEmpty()) {
+            image = ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/api/images/")
+                    .path(post.getImage())
+                    .toUriString();
+        } else {
+            image = null;
+        }
+
+        this.image = image;
     }
 
     public Long getId() { return id; }
@@ -57,4 +70,6 @@ public class PostDTO {
     public void setLiked(Boolean liked) {
         this.isLiked = liked;
     }
+
+
 }
