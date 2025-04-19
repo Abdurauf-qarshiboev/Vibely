@@ -35,10 +35,6 @@ public class Post {
     @Column(columnDefinition = "TEXT")
     private String body;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "post_id")
-    private List<PostImage> images = new ArrayList<>();
-
     @Column(name = "like_count")
     private Integer likeCount = 0;
 
@@ -47,6 +43,15 @@ public class Post {
 
     @Column(name = "is_private")
     private Boolean isPrivate;
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostImage> images = new ArrayList<>();
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Comment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Like> likes = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -58,7 +63,7 @@ public class Post {
 
     public Post() {}
 
-    public Post(User user, String title, String body, String image, Boolean isPrivate) {
+    public Post(User user, String title, String body, Boolean isPrivate) {
         this.user = user;
         this.title = title;
         this.body = body;
@@ -133,6 +138,22 @@ public class Post {
 
     public void setHashtags(Set<Hashtag> hashtags) {
         this.hashtags = hashtags;
+    }
+
+    public List<Like> getLikes() {
+        return likes;
+    }
+
+    public void setLikes(List<Like> likes) {
+        this.likes = likes;
+    }
+
+    public List<Comment> getComments() {
+        return comments;
+    }
+
+    public void setComments(List<Comment> comments) {
+        this.comments = comments;
     }
 
     public List<PostImage> getImages() {

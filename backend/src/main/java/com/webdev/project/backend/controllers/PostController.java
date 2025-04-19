@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -188,7 +189,7 @@ public class PostController {
             }
 
             if (postService.deletePost(id, user)){
-                ResponseEntity<Void> originalResponse = ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+                ResponseEntity<Map<String, Object>> originalResponse = new ResponseEntity<>(HttpStatus.OK);
                 return ResponseUtil.success(originalResponse, "Post deleted successfully");
             } else {
                 return ResponseUtil.error("POST_016", "Error deleting post", HttpStatus.INTERNAL_SERVER_ERROR);
