@@ -2,6 +2,7 @@ package com.webdev.project.backend.services;
 
 import com.webdev.project.backend.entities.Hashtag;
 import com.webdev.project.backend.entities.Post;
+import com.webdev.project.backend.entities.PostImage;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.repositories.HashtagRepository;
 import com.webdev.project.backend.repositories.PostRepository;
@@ -10,6 +11,7 @@ import com.webdev.project.backend.requests.CreatePostRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,33 +24,45 @@ public class PostService {
     private final HashtagService hashtagService;
     private final HashtagRepository hashtagRepository;
     private final ImageService imageService;
+    private final PostImageService postImageService;
 
-    public PostService(PostRepository postRepository, UserRepository userRepository, HashtagService hashtagService, HashtagRepository hashtagRepository, ImageService imageService) {
+    public PostService(PostRepository postRepository, UserRepository userRepository, HashtagService hashtagService, HashtagRepository hashtagRepository, ImageService imageService, PostImageService postImageService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.hashtagService = hashtagService;
         this.hashtagRepository = hashtagRepository;
         this.imageService = imageService;
+        this.postImageService = postImageService;
     }
 
-    public Post createPost(CreatePostRequest request, MultipartFile imageFile, User currentUser) {
+    public Post createPost(CreatePostRequest request, List<MultipartFile> imageFile, User currentUser) {
         Post post = new Post();
         post.setUser(currentUser);
         post.setTitle(request.getTitle());
         post.setBody(request.getBody());
         post.setPrivate(Boolean.TRUE.equals(request.getIsPrivate()));
 
-        // Use ImageService to handle image
+        // Use ImageService to handle images
+        List<String> imagePaths = new ArrayList<>();
         if (imageFile != null && !imageFile.isEmpty()) {
             try {
-                String imagePath = imageService.saveImage(imageFile);
-                post.setImage(imagePath);
+
+                String imagePath;
+
+                for (MultipartFile file : imageFile) {
+                    imagePath = imageService.saveImage(file);
+
+                    if (imagePath != null && !imagePath.isEmpty()) {
+                        imagePaths.add(imagePath);
+                    }
+
+                }
+
+
             } catch (Exception e) {
                 // Log error but continue with post creation
                 System.err.println("Failed to process image: " + e.getMessage());
             }
-        } else {
-            post.setImage(null);
         }
 
         // Process hashtags
@@ -62,7 +76,14 @@ public class PostService {
             hashtagRepository.save(hashtag); // Persist updated hashtag relationship
         }
 
-        return postRepository.save(post);
+        Post savedPost = postRepository.save(post);
+
+        if (!imagePaths.isEmpty()) {
+            postImageService.setImagesForPost(savedPost, imagePaths);
+            savedPost.setImages(postImageService.getImagesForPost(savedPost));
+        }
+
+        return savedPost;
     }
 
     public Optional<Post> getPostById(Long postId, User currentUser) {
@@ -89,7 +110,7 @@ public class PostService {
 
         existingPost.setTitle(updatedData.getTitle());
         existingPost.setBody(updatedData.getBody());
-        existingPost.setImage(updatedData.getImage());
+        // Post Image updates may not be allowed
         existingPost.setPrivate(updatedData.getPrivate());
         // Hashtag update can be implemented later
 
