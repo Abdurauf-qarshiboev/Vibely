@@ -11,6 +11,7 @@ import com.webdev.project.backend.repositories.UserRepository;
 import com.webdev.project.backend.requests.CommentUpdateRequest;
 import com.webdev.project.backend.requests.CreateCommentRequest;
 import com.webdev.project.backend.services.CommentService;
+import com.webdev.project.backend.services.LikeService;
 import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,9 @@ public class CommentController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private LikeService likeService;
 
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<?> addComment(
@@ -236,13 +240,27 @@ public class CommentController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
-        if (currentUserOptional.isEmpty()) {
-            return ResponseUtil.error("COMMENT_021", "Not authenticated", HttpStatus.UNAUTHORIZED);
-        }
+        try {
+            Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
 
-        // TODO: Finish after like is implemented
-        return ResponseUtil.error("COMMENT_022", "Like functionality not implemented yet", HttpStatus.NOT_IMPLEMENTED);
+            if (currentUserOptional.isEmpty()) {
+                return ResponseUtil.error("COMMENT_021", "Not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+
+            User user = currentUserOptional.get();
+            int newLikeCount = likeService.likeComment(id, user);
+
+            return ResponseUtil.success(
+                    ResponseEntity.ok(Map.of("likeCount", newLikeCount)),
+                    "Comment liked successfully"
+            );
+        } catch (ResourceNotFoundException e) {
+            return ResponseUtil.error("COMMENT_025", e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            return ResponseUtil.error("COMMENT_026", e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return ResponseUtil.error("COMMENT_027", "Failed to like comment: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @DeleteMapping("/comments/{id}/unlike")
@@ -250,12 +268,27 @@ public class CommentController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
-        if (currentUserOptional.isEmpty()) {
-            return ResponseUtil.error("COMMENT_023", "Not authenticated", HttpStatus.UNAUTHORIZED);
-        }
+        try {
+            Optional<User> currentUserOptional = userRepository.findByUsername(userDetails.getUsername());
 
-        // TODO: Finish after like is implemented
-        return ResponseUtil.error("COMMENT_024", "Unlike functionality not implemented yet", HttpStatus.NOT_IMPLEMENTED);
+            if (currentUserOptional.isEmpty()) {
+                return ResponseUtil.error("COMMENT_023", "Not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+
+            User user = currentUserOptional.get();
+            int likeCount = likeService.unlikeComment(id, user);
+
+            return ResponseUtil.success(
+                    ResponseEntity.ok(Map.of("like_count", likeCount)),
+                    "Comment unliked successfully"
+            );
+        } catch (ResourceNotFoundException e) {
+            return ResponseUtil.error("COMMENT_028", e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            return ResponseUtil.error("COMMENT_029", e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return ResponseUtil.error("COMMENT_030", "Failed to unlike comment: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
+
 }

@@ -1,10 +1,13 @@
 package com.webdev.project.backend.controllers;
 
 import com.webdev.project.backend.dto.PostDTO;
+import com.webdev.project.backend.entities.Like;
 import com.webdev.project.backend.entities.Post;
 import com.webdev.project.backend.entities.User;
+import com.webdev.project.backend.exceptions.ResourceNotFoundException;
 import com.webdev.project.backend.requests.CreatePostRequest;
 import com.webdev.project.backend.requests.PostUpdateRequest;
+import com.webdev.project.backend.services.LikeService;
 import com.webdev.project.backend.services.PostService;
 import com.webdev.project.backend.services.UserService;
 import com.webdev.project.backend.utils.ResponseUtil;
@@ -24,11 +27,12 @@ import java.util.Optional;
 public class PostController {
     private final PostService postService;
     private final UserService userService;
-
+    private final LikeService likeService;
     @Autowired
-    public PostController(PostService postService, UserService userService) {
+    public PostController(PostService postService, UserService userService,LikeService likeService) {
         this.postService = postService;
         this.userService = userService;
+        this.likeService = likeService;
     }
 
     @PostMapping
@@ -216,27 +220,62 @@ public class PostController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // TODO: Implement logic to like a post after Like entity is ready
-        return ResponseUtil.error("POST_019", "Like functionality not implemented yet", HttpStatus.NOT_IMPLEMENTED);
+        Optional<User> currentUserOptional = userService.findByUsername(userDetails.getUsername());
+        if (currentUserOptional.isEmpty()) {
+            return ResponseUtil.error("POST_017", "Not authenticated", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            int updatedLikeCount = likeService.likePost(currentUserOptional.get(), id);
+            return ResponseUtil.success(ResponseEntity.ok(updatedLikeCount), "Post liked successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseUtil.error("POST_022", e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            return ResponseUtil.error("POST_023", e.getMessage(), HttpStatus.CONFLICT);
+        } catch (Exception e) {
+            return ResponseUtil.error("POST_024", "Failed to like post: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
+
 
     @DeleteMapping("/{id}/like")
     public ResponseEntity<?> unlikePost(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // TODO: Implement logic to unlike a post after Like entity is ready
-        return ResponseUtil.error("POST_020", "Unlike functionality not implemented yet", HttpStatus.NOT_IMPLEMENTED);
+        Optional<User> currentUserOptional = userService.findByUsername(userDetails.getUsername());
+        if (currentUserOptional.isEmpty()) {
+            return ResponseUtil.error("POST_017", "Not authenticated", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            int updatedLikeCount = likeService.unlikePost(id, currentUserOptional.get());
+            return ResponseUtil.success(ResponseEntity.ok(updatedLikeCount), "Post unliked successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseUtil.error("POST_025", e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            return ResponseUtil.error("POST_026", e.getMessage(), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return ResponseUtil.error("POST_027", "Failed to unlike post: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
+
 
     @GetMapping("/{id}/likes")
     public ResponseEntity<?> getPostLikes(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // TODO: Implement logic to retrieve users who liked the post
-        return ResponseUtil.error("POST_021", "Fetching post likes not implemented yet", HttpStatus.NOT_IMPLEMENTED);
+        try {
+            List<Like> likes = likeService.getPostLikes(id);
+            return ResponseUtil.success(ResponseEntity.ok(likes), "Fetched post likes successfully");
+        } catch (ResourceNotFoundException e) {
+            return ResponseUtil.error("POST_028", e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return ResponseUtil.error("POST_029", "Failed to fetch post likes: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
+
 
     @GetMapping("/search")
     public ResponseEntity<?> searchPosts(
