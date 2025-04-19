@@ -32,18 +32,11 @@ public class ImageService {
     }
 
     public String saveImage(MultipartFile file) {
-        // Normalize file name
-        String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
-        
+
         // Generate unique file name
-        String fileName = UUID.randomUUID() + "_" + originalFileName;
+        String fileName = String.valueOf(UUID.randomUUID());
         
         try {
-            // Check if the file's name contains invalid characters
-            if(originalFileName.contains("..")) {
-                throw new RuntimeException("Sorry! Filename contains invalid path sequence " + originalFileName);
-            }
-            
             // Copy file to the target location (Replacing existing file with the same name)
             Path targetLocation = this.fileStorageLocation.resolve(fileName);
             try (InputStream inputStream = file.getInputStream()) {
