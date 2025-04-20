@@ -15,7 +15,7 @@ const CreatePostsPage = () => {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
-  const [hashtag, setHashtag] = useState("");
+  const [hashtagInput, setHashtagInput] = useState("");
   const [hashtags, setHashtags] = useState([]);
   const [images, setImages] = useState([]);
   const [previewImages, setPreviewImages] = useState([]);
@@ -60,9 +60,20 @@ const CreatePostsPage = () => {
 
   // Add a hashtag to the list
   const addHashtag = () => {
-    if (hashtag.trim() && !hashtags.includes(hashtag.trim())) {
-      setHashtags([...hashtags, hashtag.trim()]);
-      setHashtag("");
+    if (!hashtagInput.trim()) return;
+
+    // The user might enter multiple words or hashtags separated by spaces
+    const tagsToAdd = hashtagInput
+      .trim()
+      .split(/\s+/)
+      .map((tag) => tag.replace(/^#/, "")); // Remove # if user added it
+
+    // Filter out empty tags and tags that already exist
+    const newTags = tagsToAdd.filter((tag) => tag && !hashtags.includes(tag));
+
+    if (newTags.length > 0) {
+      setHashtags([...hashtags, ...newTags]);
+      setHashtagInput("");
     }
   };
 
@@ -75,10 +86,8 @@ const CreatePostsPage = () => {
   };
 
   // Remove a hashtag from the list
-  const removeHashtag = (index) => {
-    const newTags = [...hashtags];
-    newTags.splice(index, 1);
-    setHashtags(newTags);
+  const removeHashtag = (tagToRemove) => {
+    setHashtags(hashtags.filter((tag) => tag !== tagToRemove));
   };
 
   // Validate the form
@@ -119,7 +128,7 @@ const CreatePostsPage = () => {
         title,
         body,
         isPrivate,
-        hashtags,
+        hashtags, // This array contains hashtags without # symbol
       };
 
       formData.append("request", JSON.stringify(postData));
@@ -136,15 +145,15 @@ const CreatePostsPage = () => {
         },
       });
 
+
       if (response.data && response.data.success) {
         toast.success("Post created successfully!");
-
         // Clean up preview image URLs to avoid memory leaks
         previewImages.forEach((preview) => {
           URL.revokeObjectURL(preview.url);
         });
 
-        // Redirect to the post or profile page
+        // Redirect to the profile page or feed
         navigate(-1);
       } else {
         toast.error("Failed to create post");
@@ -288,21 +297,23 @@ const CreatePostsPage = () => {
           {/* Hashtags Field */}
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Hashtags</label>
-            <div className="flex flex-wrap gap-2 mb-2">
+
+            {/* Display existing hashtags */}
+            <div className="flex flex-wrap gap-2 mb-3">
               {hashtags.map((tag, index) => (
                 <div
                   key={index}
                   className={`flex items-center rounded-full px-3 py-1 text-sm ${
                     isDark
-                      ? "bg-gray-700 text-white"
+                      ? "bg-gray-800 text-white"
                       : "bg-gray-200 text-gray-800"
                   }`}
                 >
                   #{tag}
                   <button
                     type="button"
-                    onClick={() => removeHashtag(index)}
-                    className="ml-1 text-gray-500 hover:text-gray-700"
+                    onClick={() => removeHashtag(tag)}
+                    className="ml-2"
                   >
                     <XMarkIcon className="w-4 h-4" />
                   </button>
@@ -310,11 +321,12 @@ const CreatePostsPage = () => {
               ))}
             </div>
 
+            {/* Hashtag input */}
             <div className="flex">
               <input
                 type="text"
-                value={hashtag}
-                onChange={(e) => setHashtag(e.target.value)}
+                value={hashtagInput}
+                onChange={(e) => setHashtagInput(e.target.value)}
                 onKeyDown={handleHashtagKeyDown}
                 placeholder="Add hashtags without the # symbol"
                 className={`flex-1 px-3 py-2 rounded-l-md ${

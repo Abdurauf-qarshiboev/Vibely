@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useModalContext } from "@/context/main/ModalContext";
 import { useTheme } from "@/context/ThemeContext";
+import BlogCommentsPage from "../../../views/dashboard/blogs/BlogCommentsPage"; // Import the comments page component
 import { api } from "@/helpers/api";
 import { getImageUrl } from "../../../utils/ImageHelpers";
 import {
@@ -33,6 +34,7 @@ const UserProfilePage = () => {
   // Open comments for a specific post
   const openCommentsPage = (blogId, state) => {
     setToggle(blogId, state);
+    console.log("Comments page is " + state + " for a blog with id:" + blogId);
   };
 
   // Format date function with error handling
@@ -634,8 +636,8 @@ const UserProfilePage = () => {
           </div>
         )}
       </div>
-
       {/* BlogCommentsPage component should be included in the main layout */}
+      <BlogCommentsPage />
     </div>
   );
 };

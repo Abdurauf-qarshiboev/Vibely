@@ -1,7 +1,12 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
+import {
+  XMarkIcon,
+  EllipsisHorizontalIcon,
+  HeartIcon,
+} from "@heroicons/react/24/outline";
+import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
 import { useBlogsContext } from "@/context/main/BlogsContext";
 import { useCommentsContext } from "@/context/main/CommentsContext";
 import { useModalContext } from "@/context/main/ModalContext";
@@ -9,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useHashtagsContext } from "@/context/main/HashtagsContext";
 import { useTheme } from "@/context/ThemeContext";
 import { Menu } from "@headlessui/react";
+import { Link, useNavigate } from "react-router-dom";
 import { Carousel } from "antd";
 import { api } from "../../../helpers/api";
 import { getImageUrl } from "../../../utils/ImageHelpers";
@@ -28,7 +34,312 @@ const PrevArrow = (props) => (
   </div>
 );
 
+const Comment = ({
+  comment,
+  postId,
+  handleEditComment,
+  handleRemoveComment,
+  timeSince,
+  isDark,
+  currentUser,
+  processedText,
+  toggleCommentExpansion,
+  expandedComments,
+  handleReply,
+}) => {
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(comment.likeCount || 0);
+  const [showReplies, setShowReplies] = useState(false);
+  const [replies, setReplies] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Function to handle username click
+  const handleUsernameClick = (username) => {
+    navigate(`/user/${username}`);
+  };
+
+  // Toggle comment like
+  const toggleLike = async () => {
+    try {
+      setLiked((prev) => !prev);
+      setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
+
+      // API call would go here if you have a like endpoint
+      // await api.post(`/comments/${comment.id}/like`);
+    } catch (error) {
+      console.error("Error liking comment:", error);
+      // Revert state on error
+      setLiked((prev) => !prev);
+      setLikeCount((prev) => (liked ? prev + 1 : prev - 1));
+    }
+  };
+
+  // Load replies
+  const loadReplies = async () => {
+    if (comment.replyCount === 0) return;
+
+    setLoading(true);
+    try {
+      const response = await api.get(`/comments/${comment.id}/replies`);
+      if (response.data && response.data.success) {
+        setReplies(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading replies:", error);
+    } finally {
+      setLoading(false);
+    }
+
+    setShowReplies((prev) => !prev);
+  };
+
+  return (
+    <div className="mb-3">
+      <div className="flex gap-x-3">
+        <div className="flex-none">
+          <img
+            src={
+              comment.user?.avatar
+                ? `data:image/jpeg;base64,${comment.user.avatar}`
+                : "https://placehold.co/80x80/gray/white?text=User"
+            }
+            alt=""
+            className="w-8 h-8 rounded-full bg-gray-100 cursor-pointer"
+            onClick={() => handleUsernameClick(comment.user?.username)}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "https://placehold.co/80x80/gray/white?text=User";
+            }}
+          />
+        </div>
+
+        <div className="flex-auto">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-baseline flex-wrap">
+                <span
+                  className={`font-semibold text-sm mr-2 hover:underline cursor-pointer ${
+                    isDark ? "text-white" : "text-gray-900"
+                  }`}
+                  onClick={() => handleUsernameClick(comment.user?.username)}
+                >
+                  {comment.user?.username}
+                  {comment.user?.verified && (
+                    <VerifiedBadge className="inline ml-1" />
+                  )}
+                </span>
+
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: processedText(comment.body || ""),
+                  }}
+                  className={`text-sm ${
+                    isDark ? "text-gray-300" : "text-gray-800"
+                  } ${
+                    expandedComments.includes(comment.id)
+                      ? "line-clamp-none"
+                      : "line-clamp-3"
+                  }`}
+                />
+              </div>
+
+              {/* Comment actions */}
+              <div className="flex items-center space-x-4 mt-1">
+                <span className="text-xs text-gray-500">
+                  {timeSince(comment.created_at)}
+                </span>
+
+                {likeCount > 0 && (
+                  <span className="text-xs font-semibold text-gray-500">
+                    {likeCount} {likeCount === 1 ? "like" : "likes"}
+                  </span>
+                )}
+
+                <button
+                  className="text-xs font-semibold text-gray-500"
+                  onClick={() =>
+                    handleReply(comment.user?.username, comment.id)
+                  }
+                >
+                  Reply
+                </button>
+
+                {comment.isTruncated && (
+                  <button
+                    onClick={() => toggleCommentExpansion(comment.id)}
+                    className={`text-xs font-semibold ${
+                      isDark
+                        ? "text-gray-400 hover:text-gray-300"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {expandedComments.includes(comment.id) ? "less" : "more"}
+                  </button>
+                )}
+              </div>
+
+              {/* View/Hide replies */}
+              {comment.replyCount > 0 && (
+                <button
+                  className={`flex items-center mt-1 text-xs ${
+                    isDark ? "text-blue-400" : "text-blue-600"
+                  }`}
+                  onClick={loadReplies}
+                >
+                  <div className="w-5 h-[1px] bg-gray-300 mr-2"></div>
+                  {!showReplies
+                    ? `View replies (${comment.replyCount})`
+                    : "Hide replies"}
+                </button>
+              )}
+
+              {/* Display replies */}
+              {showReplies && (
+                <div className="mt-1 space-y-3">
+                  {loading && (
+                    <div className="flex justify-center py-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+
+                  {replies.map((reply) => (
+                    <Comment
+                      key={reply.id}
+                      comment={reply}
+                      postId={postId}
+                      handleEditComment={handleEditComment}
+                      handleRemoveComment={handleRemoveComment}
+                      timeSince={timeSince}
+                      isDark={isDark}
+                      currentUser={currentUser}
+                      processedText={processedText}
+                      toggleCommentExpansion={toggleCommentExpansion}
+                      expandedComments={expandedComments}
+                      handleReply={handleReply}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-start space-x-2">
+              <button onClick={toggleLike} className="focus:outline-none">
+                {liked ? (
+                  <HeartSolid className="h-3.5 w-3.5 text-red-500" />
+                ) : (
+                  <HeartIcon className="h-3.5 w-3.5 text-gray-500 hover:text-gray-700" />
+                )}
+              </button>
+
+              {comment.user?.username === currentUser?.username && (
+                <Menu as="div" className="relative">
+                  <Menu.Button
+                    className={`${
+                      isDark
+                        ? "text-gray-400 hover:text-white"
+                        : "text-gray-500 hover:text-black"
+                    }`}
+                  >
+                    <span className="sr-only">Actions</span>
+                    <EllipsisHorizontalIcon
+                      className="h-4 w-4"
+                      aria-hidden="true"
+                    />
+                  </Menu.Button>
+                  <Transition
+                    enter="transition ease-out duration-100"
+                    enterFrom="transform opacity-0 scale-95"
+                    enterTo="transform opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="transform opacity-100 scale-100"
+                    leaveTo="transform opacity-0 scale-95"
+                  >
+                    <Menu.Items
+                      className={`absolute right-0 top-0 z-10 w-24 origin-top-right rounded-md py-0 overflow-hidden shadow-lg ring-1 px-[6px] ring-gray-900/5 focus:outline-none ${
+                        isDark ? "bg-gray-800" : "bg-white"
+                      }`}
+                    >
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={() => handleEditComment(comment.id)}
+                            className={`
+                              flex items-center justify-between px-0 py-1 text-sm leading-6 text-yellow-600 w-full text-left
+                              ${
+                                active
+                                  ? isDark
+                                    ? "bg-gray-700"
+                                    : "bg-gray-50"
+                                  : ""
+                              }
+                            `}
+                          >
+                            Edit
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth="1.5"
+                              stroke="currentColor"
+                              className="size-4"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={() => handleRemoveComment(comment.id)}
+                            className={`
+                              px-0 py-1 text-sm leading-6 text-red-700 flex items-center justify-between w-full text-left
+                              ${
+                                active
+                                  ? isDark
+                                    ? "bg-gray-700"
+                                    : "bg-gray-50"
+                                  : ""
+                              }
+                            `}
+                          >
+                            Delete
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth="1.5"
+                              stroke="#C62828"
+                              className="size-4"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </Menu.Item>
+                    </Menu.Items>
+                  </Transition>
+                </Menu>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const BlogCommentsPage = () => {
+  const navigate = useNavigate();
   const { getBlogById, timeSince } = useBlogsContext();
   const {
     getCommentDraft,
@@ -53,6 +364,9 @@ const BlogCommentsPage = () => {
   const [imageCache, setImageCache] = useState({});
   const [postImages, setPostImages] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [parentCommentId, setParentCommentId] = useState(null);
+  const [commentText, setCommentText] = useState("");
 
   // Refs
   const textareaRef = useRef(null);
@@ -129,6 +443,21 @@ const BlogCommentsPage = () => {
       console.error("Error loading post images:", error);
       return [];
     }
+  };
+
+  // Function to handle replying to a comment
+  const handleReply = (username, parentId) => {
+    setReplyingTo(username);
+    setParentCommentId(parentId);
+    setCommentText(`@${username} `);
+    focusTextarea();
+  };
+
+  // Cancel reply
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setParentCommentId(null);
+    setCommentText("");
   };
 
   useEffect(() => {
@@ -260,50 +589,83 @@ const BlogCommentsPage = () => {
     const commentToEdit = comments.find((c) => c.id === commentId);
     if (commentToEdit) {
       setEditingCommentId(commentId);
-      updateCommentDraft(blog.id, commentToEdit.body);
+      setCommentText(commentToEdit.body);
       focusTextarea();
     }
   };
 
-  const handleSubmitComment = async (blogId, username) => {
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+
+    if (!commentText.trim()) return;
+
     try {
+      setLoading(true);
+
       if (editingCommentId) {
-        const updatedCommentText = getCommentDraft(blogId);
-        const { allHashtags } = await checkAndCreateHashtags(
-          updatedCommentText
-        );
-        console.log("comment hashtags after editing: ", allHashtags);
-        await editComment(editingCommentId, blogId, username);
-        setEditingCommentId(null);
+        // Update existing comment
+        const response = await api.put(`/comments/${editingCommentId}`, {
+          body: commentText,
+        });
+
+        if (response.data && response.data.success) {
+          // Update comment in state
+          setComments((prev) =>
+            prev.map((comment) =>
+              comment.id === editingCommentId
+                ? {
+                    ...comment,
+                    body: commentText,
+                    updated_at: response.data.data.updated_at,
+                  }
+                : comment
+            )
+          );
+
+          setEditingCommentId(null);
+        }
       } else {
-        const commentText = getCommentDraft(blogId);
-        const { allHashtags } = await checkAndCreateHashtags(commentText);
-        console.log("comment hashtags at first attempt: ", allHashtags);
-        await submitComment(blogId, username);
+        // Create new comment or reply
+        const response = await api.post(`/posts/${blog.id}/comments`, {
+          body: commentText,
+          parent_comment_id: parentCommentId,
+        });
+
+        if (response.data && response.data.success) {
+          // Refresh comments
+          const commentsResponse = await api.get(`/posts/${blog.id}/comments`);
+          if (commentsResponse.data && commentsResponse.data.success) {
+            setComments(
+              commentsResponse.data.data.comments.map((comment) => ({
+                ...comment,
+                isTruncated: comment.body?.length > 200,
+              }))
+            );
+          }
+        }
       }
 
-      // Refresh comments after submitting
-      const response = await api.get(`/posts/${blogId}/comments`);
-      if (response.data && response.data.success) {
-        setComments(
-          response.data.data.comments.map((comment) => ({
-            ...comment,
-            isTruncated: comment.body?.length > 200,
-          }))
-        );
-      }
+      // Reset form
+      setCommentText("");
+      setReplyingTo(null);
+      setParentCommentId(null);
     } catch (error) {
       console.error("Error submitting comment:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRemoveComment = async (id) => {
     try {
-      await removeComments(id);
+      setLoading(true);
+      await api.delete(`/comments/${id}`);
       // Remove comment from local state
       setComments(comments.filter((comment) => comment.id !== id));
     } catch (err) {
-      console.error(id, " Error removing comment: ", err);
+      console.error("Error removing comment:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -345,9 +707,7 @@ const BlogCommentsPage = () => {
           <div className="absolute right-3 top-5 pr-3 pt-3">
             <button
               type="button"
-              className={`"rounded-md bg-transparent ${
-                isDark ? "text-white" : "text-black"
-              } focus:outline-none focus:ring-0 focus:ring-none focus:ring-offset-0"`}
+              className={`"rounded-md bg-transparent text-gray-600 focus:outline-none focus:ring-0 focus:ring-none focus:ring-offset-0"`}
               onClick={close}
             >
               <span className="sr-only">Close</span>
@@ -378,7 +738,7 @@ const BlogCommentsPage = () => {
                   <div className="grid place-content-center w-full h-full">
                     {/* Ant Design Carousel instead of Splide */}
                     <div className="carousel-container w-full h-full overflow-hidden">
-                      {loading ? (
+                      {loading && !postImages.length ? (
                         <div className="aspect-square w-full flex items-center justify-center">
                           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                         </div>
@@ -428,40 +788,47 @@ const BlogCommentsPage = () => {
                 </div>
 
                 {/* Right side - Comments */}
-                <div className="relative hidden flex-1 lg:min-w-[25rem] min-w-[21rem] md:min-w-[23rem] sm:flex flex-col items-start justify-center pt-2">
+                <div className="relative hidden flex-1 lg:min-w-[25rem] min-w-[21rem] md:min-w-[23rem] sm:flex flex-col items-start justify-center">
                   {/* User info */}
                   <div
-                    className={`w-full flex items-center gap-x-3 mb-2 lg:mb-3 px-3 lg:px-4 py-1`}
+                    className={`w-full flex items-center gap-x-3 px-3 lg:px-4 py-3 border-b ${
+                      isDark ? "border-gray-800" : "border-gray-200"
+                    }`}
                   >
-                    <img
-                      src={
-                        avatarUrl ||
-                        "https://placehold.co/80x80/gray/white?text=User"
-                      }
-                      alt=""
-                      className="size-9 rounded-full bg-gray-100 cursor-pointer"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src =
-                          "https://placehold.co/80x80/gray/white?text=User";
-                      }}
-                    />
+                    <div className="flex-none">
+                      <img
+                        onClick={() => navigate(`/user/${blog.user?.username}`)}
+                        src={
+                          avatarUrl ||
+                          "https://placehold.co/80x80/gray/white?text=User"
+                        }
+                        alt=""
+                        className="w-8 h-8 rounded-full bg-gray-100 cursor-pointer"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src =
+                            "https://placehold.co/80x80/gray/white?text=User";
+                        }}
+                      />
+                    </div>
                     <div className="flex items-center justify-center gap-1 text-sm leading-6 cursor-pointer">
                       <span
                         className={`font-bold flex items-center gap-1 ${
                           isDark ? "text-white" : "text-black"
                         }`}
                       >
-                        <a
-                          href="#"
-                          className={`font-semibold leading-5 text-sm ${
+                        <div
+                          onClick={() =>
+                            navigate(`/user/${blog.user?.username}`)
+                          }
+                          className={`font-semibold leading-5 text-sm hover:underline ${
                             isDark
                               ? "text-white hover:text-gray-300"
                               : "hover:text-gray-700"
                           }`}
                         >
                           {blog.user?.username || "user"}
-                        </a>
+                        </div>
                         {blog.user?.verified && <VerifiedBadge />}
                       </span>
                     </div>
@@ -469,40 +836,45 @@ const BlogCommentsPage = () => {
 
                   {/* Comments section */}
                   <div
-                    className={`flex-1 w-full overflow-y-auto p-3 lg:p-4 border-b border-t ${
-                      isDark ? "border-white/30" : "border-black/10"
+                    className={`flex-1 w-full overflow-y-auto p-3 lg:p-4 ${
+                      isDark ? "" : ""
                     } scrollbar-hidden`}
                   >
                     {/* Blog text */}
-                    <div className="flex gap-x-3 pb-2 lg:pb-3">
-                      <a href="#" className="size-8 flex-none">
+                    <div className="flex gap-x-3 pb-4 mb-4 border-b border-gray-200 dark:border-gray-800">
+                      <div className="flex-none">
                         <img
+                          onClick={() =>
+                            navigate(`/user/${blog.user?.username}`)
+                          }
                           src={
                             avatarUrl ||
                             "https://placehold.co/80x80/gray/white?text=User"
                           }
                           alt=""
-                          className="rounded-full bg-gray-100 cursor-pointer"
+                          className="w-8 h-8 rounded-full bg-gray-100 cursor-pointer"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
                               "https://placehold.co/80x80/gray/white?text=User";
                           }}
                         />
-                      </a>
+                      </div>
                       <div className="flex-auto">
-                        <div className="flex items-baseline justify-between gap-x-3 text-sm">
-                          <span className="flex items-center gap-1 cursor-pointer mt-1">
-                            <a
-                              href="#"
-                              className={`font-semibold leading-5 text-sm ${
+                        <div className="flex items-baseline justify-between gap-x-3">
+                          <span className="flex items-center gap-1 cursor-pointer">
+                            <div
+                              onClick={() =>
+                                navigate(`/user/${blog.user?.username}`)
+                              }
+                              className={`font-semibold text-sm hover:underline ${
                                 isDark
                                   ? "text-white hover:text-gray-300"
                                   : "hover:text-gray-700"
                               }`}
                             >
                               {blog.user?.username || "user"}
-                            </a>
+                            </div>
                             {blog.user?.verified && <VerifiedBadge />}
                           </span>
                         </div>
@@ -524,253 +896,83 @@ const BlogCommentsPage = () => {
                               isDark ? "text-gray-300" : "text-black"
                             }`}
                           />
+                          {/* Add hashtags display below the post body */}
+                          {blog.hashtags && blog.hashtags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {blog.hashtags.map((tag, index) => (
+                                <span
+                                  key={index}
+                                  className={`text-blue-500 text-sm hover:text-blue-800 cursor-pointer`}
+                                  onClick={() =>
+                                    handleHashtagClick({
+                                      target: { innerText: `#${tag}` },
+                                    })
+                                  }
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500 mt-2">
+                            {timeSince(blog.createdAt)}
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Comments list */}
-                    <ul role="list" className="h-auto">
-                      {loading ? (
+                    <div className="space-y-4">
+                      {loading && !comments.length ? (
                         <div className="flex justify-center items-center py-4">
                           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
                         </div>
                       ) : comments.length > 0 ? (
                         comments.map((comment) => (
-                          <li
+                          <Comment
                             key={comment.id}
-                            className="flex gap-x-3 lg:py-3 py-2"
-                          >
-                            <a href="#" className="size-8 flex-none">
-                              <img
-                                className="rounded-full bg-gray-50"
-                                src={
-                                  "https://placehold.co/80x80/gray/white?text=User"
-                                }
-                                alt=""
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src =
-                                    "https://placehold.co/80x80/gray/white?text=User";
-                                }}
-                              />
-                            </a>
-                            <div className="flex-auto">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center justify-start gap-x-2">
-                                  <span className="flex items-center gap-1">
-                                    <div
-                                      className={`text-sm font-semibold leading-5 hover:text-gray-500 cursor-pointer ${
-                                        isDark ? "text-white" : "text-black"
-                                      }`}
-                                    >
-                                      {comment.user?.firstName ||
-                                        comment.user?.username ||
-                                        "User"}{" "}
-                                      {comment.user?.lastName || ""}
-                                    </div>
-                                    {comment.user?.verified && (
-                                      <VerifiedBadge />
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-                              <div
-                                className="flex flex-col items-center"
-                                id="commentContainer"
-                              >
-                                <div
-                                  onClick={handleHashtagClick}
-                                  className="w-full"
-                                >
-                                  <p
-                                    dangerouslySetInnerHTML={{
-                                      __html: processedText(comment.body || ""),
-                                    }}
-                                    className={`text-sm text-left w-full leading-5 ${
-                                      isDark ? "text-gray-300" : "text-black"
-                                    } ${
-                                      expandedComments.includes(comment.id)
-                                        ? "line-clamp-none"
-                                        : "line-clamp-4"
-                                    }`}
-                                  />
-                                </div>
-                                {comment.isTruncated && (
-                                  <button
-                                    onClick={() =>
-                                      toggleCommentExpansion(comment.id)
-                                    }
-                                    className={`w-fit mt-1 font-semibold text-xs ${
-                                      isDark
-                                        ? "text-gray-400 hover:text-gray-300"
-                                        : "text-gray-500 hover:text-gray-700"
-                                    }`}
-                                  >
-                                    {expandedComments.includes(comment.id)
-                                      ? "(Read less)"
-                                      : "(Read more)"}
-                                  </button>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-x-2 group">
-                                <div
-                                  className={`flex-none text-xs leading-5 ${
-                                    isDark ? "text-gray-400" : "text-gray-600"
-                                  }`}
-                                >
-                                  {timeSince(comment.created_at)}
-                                </div>
-                                {comment.user?.username === user.username && (
-                                  <Menu as="div" className="relative flex-none">
-                                    <Menu.Button
-                                      className={`block ${
-                                        isDark
-                                          ? "text-gray-400 hover:text-white"
-                                          : "text-gray-500 hover:text-black"
-                                      }`}
-                                    >
-                                      <span className="sr-only">Actions</span>
-                                      <EllipsisHorizontalIcon
-                                        className="h-4 w-4"
-                                        aria-hidden="true"
-                                      />
-                                    </Menu.Button>
-                                    <Transition
-                                      enter="transition ease-out duration-100"
-                                      enterFrom="transform opacity-0 scale-95"
-                                      enterTo="transform opacity-100 scale-100"
-                                      leave="transition ease-in duration-75"
-                                      leaveFrom="transform opacity-100 scale-100"
-                                      leaveTo="transform opacity-0 scale-95"
-                                    >
-                                      <Menu.Items
-                                        className={`absolute right-3 top-1 z-10 w-24 origin-top-right rounded-md py-0 overflow-hidden shadow-lg ring-1 px-[6px] ring-gray-900/5 focus:outline-none ${
-                                          isDark ? "bg-gray-800" : "bg-white"
-                                        }`}
-                                      >
-                                        <Menu.Item>
-                                          {({ active }) => (
-                                            <button
-                                              onClick={() =>
-                                                handleEditComment(comment.id)
-                                              }
-                                              className={`
-                                                flex items-center justify-between px-0 py-1 text-sm leading-6 text-yellow-600 w-full text-left
-                                                ${
-                                                  active
-                                                    ? isDark
-                                                      ? "bg-gray-700"
-                                                      : "bg-gray-50"
-                                                    : ""
-                                                }
-                                              `}
-                                            >
-                                              Edit
-                                              <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth="1.5"
-                                                stroke="currentColor"
-                                                className="size-4"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-                                                />
-                                              </svg>
-                                              <span className="sr-only">
-                                                , {comment.id}
-                                              </span>
-                                            </button>
-                                          )}
-                                        </Menu.Item>
-                                        <Menu.Item>
-                                          {({ active }) => (
-                                            <button
-                                              onClick={() =>
-                                                handleRemoveComment(comment.id)
-                                              }
-                                              className={`
-                                                px-0 py-1 text-sm leading-6 text-red-700 flex items-center justify-between w-full text-left
-                                                ${
-                                                  active
-                                                    ? isDark
-                                                      ? "bg-gray-700"
-                                                      : "bg-gray-50"
-                                                    : ""
-                                                }
-                                              `}
-                                            >
-                                              Delete
-                                              <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth="1.5"
-                                                stroke="#C62828"
-                                                className="size-4"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                                                />
-                                              </svg>
-                                              <span className="sr-only">
-                                                {comment.id}
-                                              </span>
-                                            </button>
-                                          )}
-                                        </Menu.Item>
-                                      </Menu.Items>
-                                    </Transition>
-                                  </Menu>
-                                )}
-                              </div>
-                            </div>
-                          </li>
+                            comment={comment}
+                            postId={blog.id}
+                            handleEditComment={handleEditComment}
+                            handleRemoveComment={handleRemoveComment}
+                            timeSince={timeSince}
+                            isDark={isDark}
+                            currentUser={user}
+                            processedText={processedText}
+                            toggleCommentExpansion={toggleCommentExpansion}
+                            expandedComments={expandedComments}
+                            handleReply={handleReply}
+                          />
                         ))
                       ) : (
                         <div className="text-center py-4 text-gray-500">
-                          No comments yet.
+                          No comments yet. Be the first to comment!
                         </div>
                       )}
-                    </ul>
+                    </div>
                   </div>
 
                   {/* Bottom actions section */}
-                  <div className="w-full">
+                  <div className="w-full border-t border-gray-200 dark:border-gray-800">
                     {/* Like and comment buttons */}
-                    <div className="w-full flex items-center gap-x-2 text-sm mt-1 px-3 lg:px-4 py-1">
+                    <div className="w-full flex items-center gap-x-4 px-4 py-3">
                       <button
                         onClick={() => toggleLike(blog)}
-                        className="relative z-10 rounded-full flex items-center justify-center gap-1 text-red-500"
+                        className="relative z-10 flex items-center justify-center"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill={blog?.liked ? "red" : "white"}
-                          viewBox="0 0 24 24"
-                          strokeWidth="1.5"
-                          stroke="red"
-                          className="size-7"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+                        {blog?.liked ? (
+                          <HeartSolid className="w-6 h-6 text-red-500" />
+                        ) : (
+                          <HeartIcon
+                            className={`w-6 h-6 ${
+                              isDark ? "text-white" : "text-gray-900"
+                            }`}
                           />
-                        </svg>
-                        {blog.likeCount}
+                        )}
                       </button>
                       <button
                         onClick={focusTextarea}
-                        className={`relative z-10 rounded-full flex items-center justify-center gap-1 ${
-                          isDark
-                            ? "text-white hover:text-gray-300"
-                            : "text-black hover:text-gray-500"
-                        }`}
+                        className={`relative z-10 flex items-center justify-center`}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -778,7 +980,7 @@ const BlogCommentsPage = () => {
                           viewBox="0 0 24 24"
                           strokeWidth="1.5"
                           stroke="currentColor"
-                          className="size-7"
+                          className="w-6 h-6"
                         >
                           <path
                             strokeLinecap="round"
@@ -790,78 +992,63 @@ const BlogCommentsPage = () => {
                     </div>
 
                     {/* Stats */}
-                    <div className="w-full flex flex-col items-start justify-center px-4 lg:px-5 py-1">
+                    <div className="w-full px-4 py-1">
                       <div
                         className={`text-sm font-bold ${
-                          isDark ? "text-gray-300" : "text-gray-700"
+                          isDark ? "text-gray-200" : "text-gray-900"
                         }`}
                       >
-                        {comments.length} comments
-                      </div>
-                      <div className="time text-sm text-gray-500">
-                        {timeSince(blog.createdAt)}
+                        {blog.likeCount || 0} likes
                       </div>
                     </div>
 
                     {/* Comment form */}
                     <div
-                      className={`w-full mt-1 py-2 px-3 lg:px-4 flex items-start space-x-4 border-t ${
-                        isDark ? "border-gray-700" : "border-gray-300"
+                      className={`w-full mt-1 py-3 px-4 flex items-center space-x-2 border-t ${
+                        isDark ? "border-gray-800" : "border-gray-200"
                       }`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            handleSubmitComment(blog.id, user.username);
-                          }}
+                      {replyingTo && (
+                        <div className="flex items-center text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md mr-2">
+                          Replying to @{replyingTo}
+                          <button
+                            onClick={cancelReply}
+                            className="ml-2 text-gray-500"
+                          >
+                            <XMarkIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+
+                      <form
+                        className="w-full flex items-center"
+                        onSubmit={handleSubmitComment}
+                      >
+                        <input
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          placeholder="Add a comment..."
+                          ref={textareaRef}
+                          className={`block w-full text-sm border-0 focus:ring-0 ${
+                            isDark
+                              ? "bg-black text-gray-300 placeholder:text-gray-500"
+                              : "bg-white text-gray-800 placeholder:text-gray-400"
+                          }`}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!commentText.trim() || loading}
+                          className={`text-blue-500 font-semibold text-sm ${
+                            !commentText.trim() || loading ? "opacity-50" : ""
+                          }`}
                         >
-                          <div className="relative">
-                            <label htmlFor="comment" className="sr-only">
-                              Add a comment
-                            </label>
-                            <textarea
-                              value={getCommentDraft(blog.id) || ""}
-                              onChange={(e) =>
-                                updateCommentDraft(blog.id, e.target.value)
-                              }
-                              rows="2"
-                              name="comment"
-                              id="comment"
-                              ref={textareaRef}
-                              className={`block w-full resize-none border-0 border-transparent p-0 pr-10 placeholder:text-sm focus:border-0 focus:ring-0 sm:text-sm sm:leading-6 scrollbar-none ${
-                                isDark
-                                  ? "bg-black text-gray-300 placeholder:text-gray-500"
-                                  : "bg-white text-gray-800 placeholder:text-gray-400"
-                              }`}
-                              placeholder="Add a comment..."
-                            />
-                            <button
-                              type="submit"
-                              className={`inline-flex items-center rounded-md text-sm font-semibold bg-transparent absolute top-1 right-0 ${
-                                isDark
-                                  ? "text-gray-400 hover:text-gray-300"
-                                  : "text-gray-400 hover:text-gray-500"
-                              }`}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth="1.5"
-                                stroke="currentColor"
-                                className="size-6"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        </form>
-                      </div>
+                          {loading
+                            ? "Posting..."
+                            : editingCommentId
+                            ? "Update"
+                            : "Post"}
+                        </button>
+                      </form>
                     </div>
                   </div>
                 </div>

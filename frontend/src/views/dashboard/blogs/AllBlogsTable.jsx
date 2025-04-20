@@ -252,7 +252,7 @@ const AllBlogsTable = () => {
               }`}
             >
               <div className="relative w-full pl-1 pb-2 flex items-center gap-x-2">
-                <a href="#">
+                <Link to={`/user/${blog.user?.username}`}>
                   <img
                     src={
                       blog.user?.avatarUrl ||
@@ -266,7 +266,7 @@ const AllBlogsTable = () => {
                         "https://placehold.co/80x80/gray/white?text=User";
                     }}
                   />
-                </a>
+                </Link>
                 <div className="flex items-center justify-center gap-1 text-base leading-6">
                   <span
                     className={`font-bold flex items-center gap-1 ${
@@ -409,6 +409,19 @@ const AllBlogsTable = () => {
                         isDark ? "text-gray-300" : "text-black"
                       }`}
                     ></p>
+                    {/* Add hashtags display below the post body */}
+                    {blog.hashtags && blog.hashtags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {blog.hashtags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className={`text-blue-500 text-sm hover:text-blue-800 cursor-pointer`}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
