@@ -321,7 +321,7 @@ const ProfilePage = () => {
               <p className="text-sm">{profileData.bio}</p>
 
               {/* Display username with @ */}
-              <div className="text-gray-500">{profileData.email}</div>
+              <div className="text-gray-500">@{profileData.username}</div>
 
               {/* Show join date */}
               <div className="text-gray-500 text-sm">

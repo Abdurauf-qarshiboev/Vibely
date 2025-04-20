@@ -11,14 +11,9 @@ import { useTheme } from "@/context/ThemeContext";
 import { Menu } from "@headlessui/react";
 import { Carousel } from "antd";
 import { api } from "../../../helpers/api";
+import { getImageUrl } from "../../../utils/ImageHelpers";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import VerifiedBadge from "../../../components/VerifiedBadge";
-
-// Sample array of carousel images for posts
-const carouselImages = [
-  "https://images.unsplash.com/photo-1682687982107-14492010e05e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-  "https://images.unsplash.com/photo-1682687220566-5599dbbebf11?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-];
 
 // Custom arrow components for the carousel
 const NextArrow = (props) => (
@@ -34,7 +29,7 @@ const PrevArrow = (props) => (
 );
 
 const BlogCommentsPage = () => {
-  const { getBlogById, timeSince, likeBlog } = useBlogsContext();
+  const { getBlogById, timeSince } = useBlogsContext();
   const {
     getCommentDraft,
     updateCommentDraft,
@@ -55,9 +50,86 @@ const BlogCommentsPage = () => {
   const [expandedComments, setExpandedComments] = useState([]);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [imageCache, setImageCache] = useState({});
+  const [postImages, setPostImages] = useState([]);
+  const [avatarUrl, setAvatarUrl] = useState(null);
 
   // Refs
   const textareaRef = useRef(null);
+
+  // Helper function to convert blob to data URL
+  const blobToDataURL = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Helper function to get image URL
+  const fetchImageUrl = async (imageId) => {
+    try {
+      if (!imageId) return null;
+
+      // Check cache first
+      if (imageCache[imageId]) {
+        return imageCache[imageId];
+      }
+
+      // Use responseType: 'blob' to handle binary data
+      const response = await api.get(`images/${imageId}`, {
+        responseType: "blob",
+      });
+
+      if (response && response.data) {
+        const contentType = response.headers["content-type"] || "image/jpeg";
+        const imageUrl = await blobToDataURL(response.data);
+
+        // Cache the result
+        setImageCache((prev) => ({ ...prev, [imageId]: imageUrl }));
+        return imageUrl;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching image ${imageId}:`, error);
+      return null;
+    }
+  };
+
+  // Helper function to get avatar URL
+  const getAvatarUrl = async (avatarId) => {
+    if (!avatarId) return null;
+    try {
+      return await fetchImageUrl(avatarId);
+    } catch (error) {
+      console.error(`Error fetching avatar ${avatarId}:`, error);
+      return null;
+    }
+  };
+
+  // Load post images
+  const loadPostImages = async (images) => {
+    if (!images || !Array.isArray(images) || images.length === 0) return [];
+
+    try {
+      const imageUrls = await Promise.all(
+        images.map(async (imageId) => {
+          try {
+            return await fetchImageUrl(imageId);
+          } catch (error) {
+            console.error(`Error loading image ${imageId}:`, error);
+            return null;
+          }
+        })
+      );
+
+      return imageUrls.filter((url) => url !== null);
+    } catch (error) {
+      console.error("Error loading post images:", error);
+      return [];
+    }
+  };
 
   useEffect(() => {
     // Add null check for modalState
@@ -65,19 +137,35 @@ const BlogCommentsPage = () => {
       const fetchData = async () => {
         try {
           setLoading(true);
-          // Get blog details
-          const currentBlog = getBlogById(modalState.id);
 
-          if (currentBlog) {
-            setBlog(currentBlog);
+          // Directly fetch post data from API using the ID
+          const response = await api.get(`/posts/${modalState.id}`);
+
+          if (response.data && response.data.success) {
+            const postData = response.data.data;
+            setBlog(postData);
+
+            // Load post images
+            if (postData.images && postData.images.length > 0) {
+              const loadedImages = await loadPostImages(postData.images);
+              setPostImages(loadedImages);
+            }
+
+            // Load user avatar
+            if (postData.user?.avatar) {
+              const userAvatarUrl = await getAvatarUrl(postData.user.avatar);
+              setAvatarUrl(userAvatarUrl);
+            }
 
             // Fetch comments for this post
-            const response = await api.get(`/posts/${modalState.id}/comments`);
+            const commentsResponse = await api.get(
+              `/posts/${modalState.id}/comments`
+            );
 
-            if (response.data && response.data.success) {
+            if (commentsResponse.data && commentsResponse.data.success) {
               // Map comments with expanded state
               setComments(
-                response.data.data.comments.map((comment) => ({
+                commentsResponse.data.data.comments.map((comment) => ({
                   ...comment,
                   isTruncated: comment.body?.length > 200,
                 }))
@@ -85,9 +173,13 @@ const BlogCommentsPage = () => {
             } else {
               setComments([]);
             }
+          } else {
+            console.error("Failed to fetch post details:", response);
+            setBlog({});
+            setComments([]);
           }
         } catch (err) {
-          console.error("Error fetching comments:", err);
+          console.error("Error fetching post data:", err);
           setComments([]);
         } finally {
           setLoading(false);
@@ -96,7 +188,7 @@ const BlogCommentsPage = () => {
 
       fetchData();
     }
-  }, [modalState, getBlogById]);
+  }, [modalState]);
 
   // Update the toggleLike function
   const toggleLike = async (blog) => {
@@ -131,6 +223,7 @@ const BlogCommentsPage = () => {
       setTimeout(() => {
         setBlog({});
         setComments([]);
+        setPostImages([]);
       }, 300);
     }
   }, [modalState]);
@@ -141,6 +234,7 @@ const BlogCommentsPage = () => {
       setToggle(null, false);
       setBlog({});
       setComments([]);
+      setPostImages([]);
     }, 300);
   };
 
@@ -251,11 +345,13 @@ const BlogCommentsPage = () => {
           <div className="absolute right-3 top-5 pr-3 pt-3">
             <button
               type="button"
-              className={`"rounded-md bg-transparent ${isDark ? "text-white" : "text-black"} focus:outline-none focus:ring-0 focus:ring-none focus:ring-offset-0"`}
+              className={`"rounded-md bg-transparent ${
+                isDark ? "text-white" : "text-black"
+              } focus:outline-none focus:ring-0 focus:ring-none focus:ring-offset-0"`}
               onClick={close}
             >
               <span className="sr-only">Close</span>
-              <XMarkIcon className="size-7 font-bold"  />
+              <XMarkIcon className="size-7 font-bold" />
             </button>
           </div>
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0 ">
@@ -277,31 +373,56 @@ const BlogCommentsPage = () => {
                 <div
                   className={` ${
                     isDark ? "bg-black" : "bg-transparent"
-                  }"flex flex-col items-center justify-center max-w-[45rem] w-full lg:w-100"`}
+                  }"flex flex-col items-center justify-center max-w-[45rem] w-full lg:w-100 border-r border-r-1 border-white/10"`}
                 >
                   <div className="grid place-content-center w-full h-full">
                     {/* Ant Design Carousel instead of Splide */}
                     <div className="carousel-container w-full h-full overflow-hidden">
-                      <Carousel
-                        arrows
-                        nextArrow={<NextArrow />}
-                        prevArrow={<PrevArrow />}
-                        dots={{ className: "custom-dots" }}
-                        className="post-carousel"
-                      >
-                        {carouselImages.map((image, index) => (
-                          <div key={index} className="carousel-item">
-                            <div className="aspect-square w-full">
-                              <img
-                                src={image}
-                                alt={`Post image ${index + 1}`}
-                                className="object-contain w-full h-full"
-                                loading="lazy"
-                              />
+                      {loading ? (
+                        <div className="aspect-square w-full flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                        </div>
+                      ) : (
+                        <Carousel
+                          arrows={postImages && postImages.length > 1}
+                          nextArrow={<NextArrow />}
+                          prevArrow={<PrevArrow />}
+                          dots={{ className: "custom-dots" }}
+                          className="post-carousel"
+                        >
+                          {postImages && postImages.length > 0 ? (
+                            postImages.map((imageUrl, index) => (
+                              <div key={index} className="carousel-item">
+                                <div className="aspect-square w-full">
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Post image ${index + 1}`}
+                                    className="object-contain w-full h-full"
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src =
+                                        "https://placehold.co/600x400/gray/white?text=Image+Not+Found";
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="carousel-item">
+                              <div className="aspect-square w-full h-full">
+                                <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800">
+                                  <img
+                                    className="object-contain w-60 h-60"
+                                    src="./assets/no-image-placeholder.jpeg"
+                                    alt="image not found"
+                                  />
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </Carousel>
+                          )}
+                        </Carousel>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -314,11 +435,16 @@ const BlogCommentsPage = () => {
                   >
                     <img
                       src={
-                        blog.user?.avatar ||
-                        "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                        avatarUrl ||
+                        "https://placehold.co/80x80/gray/white?text=User"
                       }
                       alt=""
                       className="size-9 rounded-full bg-gray-100 cursor-pointer"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src =
+                          "https://placehold.co/80x80/gray/white?text=User";
+                      }}
                     />
                     <div className="flex items-center justify-center gap-1 text-sm leading-6 cursor-pointer">
                       <span
@@ -334,7 +460,7 @@ const BlogCommentsPage = () => {
                               : "hover:text-gray-700"
                           }`}
                         >
-                          {blog.user?.username}
+                          {blog.user?.username || "user"}
                         </a>
                         {blog.user?.verified && <VerifiedBadge />}
                       </span>
@@ -352,16 +478,21 @@ const BlogCommentsPage = () => {
                       <a href="#" className="size-8 flex-none">
                         <img
                           src={
-                            blog.user?.avatar ||
-                            "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                            avatarUrl ||
+                            "https://placehold.co/80x80/gray/white?text=User"
                           }
                           alt=""
-                          className="rounded-full bg-gray-100  cursor-pointer"
+                          className="rounded-full bg-gray-100 cursor-pointer"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src =
+                              "https://placehold.co/80x80/gray/white?text=User";
+                          }}
                         />
                       </a>
                       <div className="flex-auto">
                         <div className="flex items-baseline justify-between gap-x-3 text-sm">
-                          <span className="flex items-center gap-1 cursor-pointer">
+                          <span className="flex items-center gap-1 cursor-pointer mt-1">
                             <a
                               href="#"
                               className={`font-semibold leading-5 text-sm ${
@@ -370,12 +501,21 @@ const BlogCommentsPage = () => {
                                   : "hover:text-gray-700"
                               }`}
                             >
-                              {blog.user?.username}
+                              {blog.user?.username || "user"}
                             </a>
                             {blog.user?.verified && <VerifiedBadge />}
                           </span>
                         </div>
                         <div>
+                          {blog.title && (
+                            <div
+                              className={`font-semibold text-left mt-1 ${
+                                isDark ? "text-white" : "text-black"
+                              }`}
+                            >
+                              {blog.title}
+                            </div>
+                          )}
                           <div
                             dangerouslySetInnerHTML={{
                               __html: processedText(blog.body || ""),
@@ -390,195 +530,213 @@ const BlogCommentsPage = () => {
 
                     {/* Comments list */}
                     <ul role="list" className="h-auto">
-                      {comments.map((comment) => (
-                        <li
-                          key={comment.id}
-                          className="flex gap-x-3 lg:py-3 py-2"
-                        >
-                          <a href="#" className="size-8 flex-none">
-                            <img
-                              className="rounded-full bg-gray-50"
-                              src={
-                                comment.user?.avatar ||
-                                "https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                              }
-                              alt=""
-                            />
-                          </a>
-                          <div className="flex-auto">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center justify-start gap-x-2">
-                                <span className="flex items-center gap-1">
-                                  <div
-                                    className={`text-sm font-semibold leading-5 hover:text-gray-500 cursor-pointer ${
-                                      isDark ? "text-white" : "text-black"
-                                    }`}
-                                  >
-                                    {comment.user?.firstName}{" "}
-                                    {comment.user?.lastName}
-                                  </div>
-                                  {comment.user?.verified && <VerifiedBadge />}
-                                </span>
-                              </div>
-                            </div>
-                            <div
-                              className="flex flex-col items-center"
-                              id="commentContainer"
-                            >
-                              <div
-                                onClick={handleHashtagClick}
-                                className="w-full"
-                              >
-                                <p
-                                  dangerouslySetInnerHTML={{
-                                    __html: processedText(comment.body || ""),
-                                  }}
-                                  className={`text-sm text-left w-full leading-5 ${
-                                    isDark ? "text-gray-300" : "text-black"
-                                  } ${
-                                    expandedComments.includes(comment.id)
-                                      ? "line-clamp-none"
-                                      : "line-clamp-4"
-                                  }`}
-                                />
-                              </div>
-                              {comment.isTruncated && (
-                                <button
-                                  onClick={() =>
-                                    toggleCommentExpansion(comment.id)
-                                  }
-                                  className={`w-fit mt-1 font-semibold text-xs ${
-                                    isDark
-                                      ? "text-gray-400 hover:text-gray-300"
-                                      : "text-gray-500 hover:text-gray-700"
-                                  }`}
-                                >
-                                  {expandedComments.includes(comment.id)
-                                    ? "(Read less)"
-                                    : "(Read more)"}
-                                </button>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-x-2 group">
-                              <div
-                                className={`flex-none text-xs leading-5 ${
-                                  isDark ? "text-gray-400" : "text-gray-600"
-                                }`}
-                              >
-                                {timeSince(comment.created_at)}
-                              </div>
-                              {comment.user?.username === user.username && (
-                                <Menu as="div" className="relative flex-none">
-                                  <Menu.Button
-                                    className={`block ${
-                                      isDark
-                                        ? "text-gray-400 hover:text-white"
-                                        : "text-gray-500 hover:text-black"
-                                    }`}
-                                  >
-                                    <span className="sr-only">Actions</span>
-                                    <EllipsisHorizontalIcon
-                                      className="h-4 w-4"
-                                      aria-hidden="true"
-                                    />
-                                  </Menu.Button>
-                                  <Transition
-                                    enter="transition ease-out duration-100"
-                                    enterFrom="transform opacity-0 scale-95"
-                                    enterTo="transform opacity-100 scale-100"
-                                    leave="transition ease-in duration-75"
-                                    leaveFrom="transform opacity-100 scale-100"
-                                    leaveTo="transform opacity-0 scale-95"
-                                  >
-                                    <Menu.Items
-                                      className={`absolute right-3 top-1 z-10 w-24 origin-top-right rounded-md py-0 overflow-hidden shadow-lg ring-1 px-[6px] ring-gray-900/5 focus:outline-none ${
-                                        isDark ? "bg-gray-800" : "bg-white"
+                      {loading ? (
+                        <div className="flex justify-center items-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                        </div>
+                      ) : comments.length > 0 ? (
+                        comments.map((comment) => (
+                          <li
+                            key={comment.id}
+                            className="flex gap-x-3 lg:py-3 py-2"
+                          >
+                            <a href="#" className="size-8 flex-none">
+                              <img
+                                className="rounded-full bg-gray-50"
+                                src={
+                                  "https://placehold.co/80x80/gray/white?text=User"
+                                }
+                                alt=""
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src =
+                                    "https://placehold.co/80x80/gray/white?text=User";
+                                }}
+                              />
+                            </a>
+                            <div className="flex-auto">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-start gap-x-2">
+                                  <span className="flex items-center gap-1">
+                                    <div
+                                      className={`text-sm font-semibold leading-5 hover:text-gray-500 cursor-pointer ${
+                                        isDark ? "text-white" : "text-black"
                                       }`}
                                     >
-                                      <Menu.Item>
-                                        {({ active }) => (
-                                          <button
-                                            onClick={() =>
-                                              handleEditComment(comment.id)
-                                            }
-                                            className={`
-                                              flex items-center justify-between px-0 py-1 text-sm leading-6 text-yellow-600 w-full text-left
-                                              ${
-                                                active
-                                                  ? isDark
-                                                    ? "bg-gray-700"
-                                                    : "bg-gray-50"
-                                                  : ""
+                                      {comment.user?.firstName ||
+                                        comment.user?.username ||
+                                        "User"}{" "}
+                                      {comment.user?.lastName || ""}
+                                    </div>
+                                    {comment.user?.verified && (
+                                      <VerifiedBadge />
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                              <div
+                                className="flex flex-col items-center"
+                                id="commentContainer"
+                              >
+                                <div
+                                  onClick={handleHashtagClick}
+                                  className="w-full"
+                                >
+                                  <p
+                                    dangerouslySetInnerHTML={{
+                                      __html: processedText(comment.body || ""),
+                                    }}
+                                    className={`text-sm text-left w-full leading-5 ${
+                                      isDark ? "text-gray-300" : "text-black"
+                                    } ${
+                                      expandedComments.includes(comment.id)
+                                        ? "line-clamp-none"
+                                        : "line-clamp-4"
+                                    }`}
+                                  />
+                                </div>
+                                {comment.isTruncated && (
+                                  <button
+                                    onClick={() =>
+                                      toggleCommentExpansion(comment.id)
+                                    }
+                                    className={`w-fit mt-1 font-semibold text-xs ${
+                                      isDark
+                                        ? "text-gray-400 hover:text-gray-300"
+                                        : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                  >
+                                    {expandedComments.includes(comment.id)
+                                      ? "(Read less)"
+                                      : "(Read more)"}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-x-2 group">
+                                <div
+                                  className={`flex-none text-xs leading-5 ${
+                                    isDark ? "text-gray-400" : "text-gray-600"
+                                  }`}
+                                >
+                                  {timeSince(comment.created_at)}
+                                </div>
+                                {comment.user?.username === user.username && (
+                                  <Menu as="div" className="relative flex-none">
+                                    <Menu.Button
+                                      className={`block ${
+                                        isDark
+                                          ? "text-gray-400 hover:text-white"
+                                          : "text-gray-500 hover:text-black"
+                                      }`}
+                                    >
+                                      <span className="sr-only">Actions</span>
+                                      <EllipsisHorizontalIcon
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                      />
+                                    </Menu.Button>
+                                    <Transition
+                                      enter="transition ease-out duration-100"
+                                      enterFrom="transform opacity-0 scale-95"
+                                      enterTo="transform opacity-100 scale-100"
+                                      leave="transition ease-in duration-75"
+                                      leaveFrom="transform opacity-100 scale-100"
+                                      leaveTo="transform opacity-0 scale-95"
+                                    >
+                                      <Menu.Items
+                                        className={`absolute right-3 top-1 z-10 w-24 origin-top-right rounded-md py-0 overflow-hidden shadow-lg ring-1 px-[6px] ring-gray-900/5 focus:outline-none ${
+                                          isDark ? "bg-gray-800" : "bg-white"
+                                        }`}
+                                      >
+                                        <Menu.Item>
+                                          {({ active }) => (
+                                            <button
+                                              onClick={() =>
+                                                handleEditComment(comment.id)
                                               }
-                                            `}
-                                          >
-                                            Edit
-                                            <svg
-                                              xmlns="http://www.w3.org/2000/svg"
-                                              fill="none"
-                                              viewBox="0 0 24 24"
-                                              strokeWidth="1.5"
-                                              stroke="currentColor"
-                                              className="size-4"
+                                              className={`
+                                                flex items-center justify-between px-0 py-1 text-sm leading-6 text-yellow-600 w-full text-left
+                                                ${
+                                                  active
+                                                    ? isDark
+                                                      ? "bg-gray-700"
+                                                      : "bg-gray-50"
+                                                    : ""
+                                                }
+                                              `}
                                             >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-                                              />
-                                            </svg>
-                                            <span className="sr-only">
-                                              , {comment.id}
-                                            </span>
-                                          </button>
-                                        )}
-                                      </Menu.Item>
-                                      <Menu.Item>
-                                        {({ active }) => (
-                                          <button
-                                            onClick={() =>
-                                              handleRemoveComment(comment.id)
-                                            }
-                                            className={`
-                                              px-0 py-1 text-sm leading-6 text-red-700 flex items-center justify-between w-full text-left
-                                              ${
-                                                active
-                                                  ? isDark
-                                                    ? "bg-gray-700"
-                                                    : "bg-gray-50"
-                                                  : ""
+                                              Edit
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                strokeWidth="1.5"
+                                                stroke="currentColor"
+                                                className="size-4"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                                                />
+                                              </svg>
+                                              <span className="sr-only">
+                                                , {comment.id}
+                                              </span>
+                                            </button>
+                                          )}
+                                        </Menu.Item>
+                                        <Menu.Item>
+                                          {({ active }) => (
+                                            <button
+                                              onClick={() =>
+                                                handleRemoveComment(comment.id)
                                               }
-                                            `}
-                                          >
-                                            Delete
-                                            <svg
-                                              xmlns="http://www.w3.org/2000/svg"
-                                              fill="none"
-                                              viewBox="0 0 24 24"
-                                              strokeWidth="1.5"
-                                              stroke="#C62828"
-                                              className="size-4"
+                                              className={`
+                                                px-0 py-1 text-sm leading-6 text-red-700 flex items-center justify-between w-full text-left
+                                                ${
+                                                  active
+                                                    ? isDark
+                                                      ? "bg-gray-700"
+                                                      : "bg-gray-50"
+                                                    : ""
+                                                }
+                                              `}
                                             >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                                              />
-                                            </svg>
-                                            <span className="sr-only">
-                                              {comment.id}
-                                            </span>
-                                          </button>
-                                        )}
-                                      </Menu.Item>
-                                    </Menu.Items>
-                                  </Transition>
-                                </Menu>
-                              )}
+                                              Delete
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                strokeWidth="1.5"
+                                                stroke="#C62828"
+                                                className="size-4"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                                                />
+                                              </svg>
+                                              <span className="sr-only">
+                                                {comment.id}
+                                              </span>
+                                            </button>
+                                          )}
+                                        </Menu.Item>
+                                      </Menu.Items>
+                                    </Transition>
+                                  </Menu>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </li>
-                      ))}
+                          </li>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          No comments yet.
+                        </div>
+                      )}
                     </ul>
                   </div>
 
@@ -673,7 +831,7 @@ const BlogCommentsPage = () => {
                               ref={textareaRef}
                               className={`block w-full resize-none border-0 border-transparent p-0 pr-10 placeholder:text-sm focus:border-0 focus:ring-0 sm:text-sm sm:leading-6 scrollbar-none ${
                                 isDark
-                                  ? "bg-gray-900 text-gray-300 placeholder:text-gray-500"
+                                  ? "bg-black text-gray-300 placeholder:text-gray-500"
                                   : "bg-white text-gray-800 placeholder:text-gray-400"
                               }`}
                               placeholder="Add a comment..."
