@@ -115,21 +115,9 @@ export const AuthProvider = ({ children }) => {
       setIsAuth(true);
     } catch (err) {
       console.log(err);
-      // logout();
+      logout();
     }
   };
-
-  // const updateUserStatus = async (status) => {
-  //   try {
-  //     const userId = user._id;
-  //     const { data } = await api.put(`users/profile`, status);
-  //     setUser({ ...data });
-  //     message.success("User updated successfully!");
-  //   } catch (error) {
-  //     console.error(error);
-  //     message.error("Failed to update user!");
-  //   }
-  // };
 
   return (
     <AuthContext.Provider
@@ -140,7 +128,6 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         checkUser,
-        // updateUserStatus,
       }}
     >
       {children}

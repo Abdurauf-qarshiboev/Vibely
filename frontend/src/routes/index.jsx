@@ -20,7 +20,6 @@ const SignupPage = lazy(() => import("../views/auth/SignupPage"));
 
 // Dashboard pages
 const DashboardPage = lazy(() => import("../views/dashboard/DashboardPage"));
-const MyBlogsPage = lazy(() => import("../views/dashboard/MyBlogsPage"));
 const ExplorePage = lazy(() => import("../views/dashboard/blogs/ExplorePage"));
 const NotificationsPage = lazy(() =>
   import("../views/dashboard/blogs/NotificationsPage")
@@ -28,17 +27,23 @@ const NotificationsPage = lazy(() =>
 const CreatePostsPage = lazy(() =>
   import("../views/dashboard/blogs/CreatePostsPage")
 );
-const EditBlogs = lazy(() => import("../views/dashboard/blogs/EditPost"));
+const EditPostPage = lazy(() =>
+  import("../views/dashboard/blogs/EditPostPage")
+);
 const ProfilePage = lazy(() =>
   import("../views/dashboard/profile/ProfilePage")
 );
-const UserProfilePage = lazy(() => import("../views/dashboard/profile/UserProfile"))
+const UserProfilePage = lazy(() =>
+  import("../views/dashboard/profile/UserProfilePage")
+);
 const EditProfilePage = lazy(() =>
   import("../views/dashboard/profile/EditProfilePage")
 );
 // Loading component
 const Loading = () => (
-  <div className="flex items-center justify-center h-screen text-white font-bold">Loading...</div>
+  <div className="flex items-center justify-center h-screen text-white font-bold">
+    Loading...
+  </div>
 );
 
 const AppRoutes = () => {
@@ -138,12 +143,11 @@ const AppRoutes = () => {
         {/* Dashboard Routes */}
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
-          <Route path="myblogs" element={<MyBlogsPage />} />
           <Route path="explore" element={<ExplorePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="create" element={<CreatePostsPage />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="blogs/:id" element={<EditBlogs />} />
+          <Route path="edit-post/:id" element={<EditPostPage />} />
           <Route path="/user/:username" element={<UserProfilePage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
         </Route>

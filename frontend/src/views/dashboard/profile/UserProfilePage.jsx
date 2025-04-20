@@ -1,19 +1,21 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useModalContext } from "@/context/main/ModalContext";
 import { useTheme } from "@/context/ThemeContext";
-import BlogCommentsPage from "../../../views/dashboard/blogs/BlogCommentsPage"; // Import the comments page component
+import BlogCommentsPage from "../blogs/BlogCommentsPage";
 import { api } from "@/helpers/api";
 import { getImageUrl } from "../../../utils/ImageHelpers";
 import {
   CameraIcon,
   UserIcon,
   ChevronLeftIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { PhotoIcon, BookmarkIcon, TagIcon } from "@heroicons/react/24/solid";
 import VerifiedBadge from "../../../components/VerifiedBadge";
-
+import { Tag } from "antd";
 const UserProfilePage = () => {
   const navigate = useNavigate();
   const { username } = useParams(); // Get username from URL params
@@ -30,11 +32,14 @@ const UserProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const fetchAttempted = useRef(false);
+  const postsAttemptedRef = useRef(false);
+
+  // Check if this profile belongs to the current user
+  const isOwnProfile = currentUser?.username === username;
 
   // Open comments for a specific post
   const openCommentsPage = (blogId, state) => {
     setToggle(blogId, state);
-    console.log("Comments page is " + state + " for a blog with id:" + blogId);
   };
 
   // Format date function with error handling
@@ -55,9 +60,11 @@ const UserProfilePage = () => {
   const loadAvatar = async (avatarId) => {
     if (!avatarId) return;
     try {
+      console.log("Loading avatar with ID:", avatarId);
       const url = await getImageUrl(avatarId, imageCache, setImageCache);
       if (url) {
         setAvatarUrl(url);
+        console.log("Avatar URL loaded successfully");
       }
     } catch (error) {
       console.error("Error loading avatar:", error);
@@ -109,6 +116,9 @@ const UserProfilePage = () => {
 
   // Fetch user profile data
   useEffect(() => {
+    const controller = new AbortController();
+    let isMounted = true;
+
     const fetchUserProfile = async () => {
       if (!username || fetchAttempted.current) return;
 
@@ -118,7 +128,11 @@ const UserProfilePage = () => {
 
       try {
         // Fetch user profile data
-        const userResponse = await api.get(`users/${username}`);
+        const userResponse = await api.get(`users/${username}`, {
+          signal: controller.signal,
+        });
+
+        if (!isMounted) return;
 
         if (userResponse.data && userResponse.data.success) {
           const userData = userResponse.data.data;
@@ -135,8 +149,8 @@ const UserProfilePage = () => {
             postsCount: 0,
             followersCount: userData.followersCount || 0,
             followingCount: userData.followingCount || 0,
-            email: "", // Don't show email of other users
-            website: userData.website || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
             joinDate: userData.created_at || "",
             private: userData.private || false,
           });
@@ -154,77 +168,131 @@ const UserProfilePage = () => {
           setError("User not found");
         }
       } catch (error) {
-        console.error("Error fetching user profile:", error);
-        setError("Failed to load user profile");
+        if (!isMounted) return;
+
+        if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
+          console.log("Profile request was canceled during navigation");
+        } else {
+          console.error("Error fetching user profile:", error);
+          setError("Failed to load user profile");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchUserProfile();
+
+    // Reset the fetched flag when username changes
+    return () => {
+      isMounted = false;
+      controller.abort();
+      fetchAttempted.current = false;
+      postsAttemptedRef.current = false;
+    };
   }, [username, currentUser]);
 
-  // Fetch user posts
+  // Fetch user posts - Improved and stable version
   useEffect(() => {
-    const fetchUserPosts = async () => {
-      if (!username) return;
+    const controller = new AbortController();
+    let isMounted = true;
 
+    // Fetch user's posts
+    const fetchUserPosts = async () => {
+      // Avoid duplicate requests
+      if (!username || postsAttemptedRef.current) return;
+
+      postsAttemptedRef.current = true;
       setLoading(true);
 
       try {
-        // Fetch user's posts
-        const postsResponse = await api.get(`/posts/user?user=${username}`);
+        console.log("Fetching posts for user:", username);
+
+        const postsResponse = await api.get(`/posts/user?user=${username}`, {
+          signal: controller.signal,
+        });
+
+        if (!isMounted) return;
 
         if (postsResponse.data && postsResponse.data.success) {
+          const posts = postsResponse.data.data || [];
+          console.log(`Found ${posts.length} posts for user ${username}`);
+
           // Process posts to include image URLs
-          const processedPosts = await Promise.all(
-            postsResponse.data.data.map(async (post) => {
-              try {
-                // Get first image as featured image
-                let featuredImageUrl = null;
-                if (post.images && post.images.length > 0) {
-                  featuredImageUrl = await getImageUrl(
-                    post.images[0],
-                    imageCache,
-                    setImageCache
-                  );
-                }
+          const processedPosts = [];
 
-                return {
-                  ...post,
-                  featuredImageUrl,
-                };
-              } catch (error) {
-                console.error(`Error processing post ${post.id}:`, error);
-                return {
-                  ...post,
-                  featuredImageUrl: null,
-                };
+          for (const post of posts) {
+            try {
+              // Get first image as featured image
+              let featuredImageUrl = null;
+              if (post.images && post.images.length > 0) {
+                featuredImageUrl = await getImageUrl(
+                  post.images[0],
+                  imageCache,
+                  setImageCache
+                );
               }
-            })
-          );
 
+              processedPosts.push({
+                ...post,
+                featuredImageUrl,
+              });
+            } catch (error) {
+              if (!isMounted) break;
+
+              console.error(`Error processing post ${post.id}:`, error);
+              processedPosts.push({
+                ...post,
+                featuredImageUrl: null,
+              });
+            }
+          }
+
+          if (!isMounted) return;
+
+          // Set posts and update count data
           setUserPosts(processedPosts);
 
-          // Update post count in profile data
-          if (profileData) {
-            setProfileData((prev) => ({
+          // Update post count in profile data - safely
+          setProfileData((prev) => {
+            if (!prev) return prev;
+            return {
               ...prev,
-              postsCount: postsResponse.data.data.length,
-            }));
-          }
+              postsCount: posts.length,
+            };
+          });
+
+          console.log("User posts loaded successfully:", processedPosts.length);
         }
       } catch (error) {
-        console.error("Error fetching user posts:", error);
+        if (!isMounted) return;
+
+        // Only log non-aborted errors as real errors
+        if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
+          console.log(
+            "Posts request was canceled - this is normal during navigation"
+          );
+        } else {
+          console.error("Error fetching user posts:", error);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    if (profileData) {
-      fetchUserPosts();
-    }
-  }, [username, profileData]);
+    // Execute the fetch
+    fetchUserPosts();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [username]); // Only depend on username to avoid re-fetching
 
   // Handle back button click
   const handleBack = () => {
@@ -332,7 +400,7 @@ const UserProfilePage = () => {
               </div>
 
               <div className="flex sm:ml-4">
-                {currentUser?.username !== username ? (
+                {!isOwnProfile ? (
                   <>
                     <button
                       onClick={toggleFollow}
@@ -355,15 +423,28 @@ const UserProfilePage = () => {
                     </button>
                   </>
                 ) : (
-                  <Link to="/profile">
+                  <div className="flex space-x-2">
                     <button
-                      className={`px-4 py-1 rounded-lg font-medium ${
-                        isDark ? "bg-gray-800" : "bg-gray-100"
+                      onClick={() => navigate("/edit-profile")}
+                      className={`px-4 py-1 text-sm font-semibold rounded ${
+                        isDark
+                          ? "bg-gray-800 text-white"
+                          : "bg-gray-200 text-gray-800"
                       }`}
                     >
-                      View your profile
+                      Edit Profile
                     </button>
-                  </Link>
+
+                    <button
+                      className={`p-1 rounded ${
+                        isDark
+                          ? "bg-gray-800 text-white"
+                          : "bg-gray-200 text-gray-800"
+                      }`}
+                    >
+                      <Cog6ToothIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -401,21 +482,15 @@ const UserProfilePage = () => {
               </div>
               <p className="text-sm">{profileData?.bio}</p>
 
-              {/* Show website if any */}
-              {profileData?.website && (
-                <div className="text-blue-500">
-                  <a
-                    href={profileData.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {profileData.website}
-                  </a>
-                </div>
-              )}
+              {/* Display username with @ , email and phone*/}
+              <div className="flex items-center gap-2">
+                <Tag color="geekblue">@{profileData.username}</Tag>
+                <Tag color="geekblue-inverse">{profileData.email}</Tag>
+                <Tag color="blue">{profileData.phone}</Tag>
+              </div>
 
               {/* Show join date */}
-              <div className="text-gray-500 text-sm">
+              <div className="text-gray-500 text-sm mt-1">
                 Joined {formatJoinDate(profileData?.joinDate)}
               </div>
             </div>
@@ -451,7 +526,7 @@ const UserProfilePage = () => {
           </button>
 
           {/* Only show saved tab for own profile */}
-          {currentUser?.username === username && (
+          {isOwnProfile && (
             <button
               onClick={() => setActiveTab("saved")}
               className={`py-3 flex-1 flex justify-center items-center gap-1 ${
@@ -497,8 +572,9 @@ const UserProfilePage = () => {
 
       {/* Content based on active tab */}
       <div className="max-w-4xl mx-auto px-4 pb-20">
+        {/* POSTS TAB */}
         {activeTab === "posts" && (
-          <>
+          <div>
             {loading && !userPosts.length ? (
               <div className="flex justify-center items-center py-20">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
@@ -526,8 +602,8 @@ const UserProfilePage = () => {
                       }}
                     />
 
-                    {/* Hover overlay with likes and comments count - Instagram style */}
-                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-8 text-white">
+                    {/* Hover overlay with likes and comments count */}
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center space-x-8 text-white">
                       <div className="flex items-center">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -538,7 +614,7 @@ const UserProfilePage = () => {
                           <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
                         </svg>
                         <span className="text-xl font-medium">
-                          {post.likeCount}
+                          {post.likeCount || 0}
                         </span>
                       </div>
 
@@ -556,7 +632,7 @@ const UserProfilePage = () => {
                           />
                         </svg>
                         <span className="text-xl font-medium">
-                          {post.commentCount}
+                          {post.commentCount || 0}
                         </span>
                       </div>
                     </div>
@@ -568,7 +644,7 @@ const UserProfilePage = () => {
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
                           fill="white"
-                          className="w-5 h-5"
+                          className="w-5 h-5 drop-shadow-md"
                         >
                           <path
                             fillRule="evenodd"
@@ -591,52 +667,100 @@ const UserProfilePage = () => {
                   <CameraIcon className="w-12 h-12 text-gray-500" />
                 </div>
                 <h3 className="mt-4 text-2xl font-bold">No Posts Yet</h3>
+                <p className="mt-2 text-gray-500 max-w-md">
+                  {isOwnProfile
+                    ? "When you share photos, they will appear here."
+                    : `When ${profileData?.username} shares photos, they will appear here.`}
+                </p>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => navigate("/create-post")}
+                    className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                  >
+                    Create Your First Post
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SAVED TAB */}
+        {activeTab === "saved" && (
+          <>
+            {isOwnProfile ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                {loading ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                ) : (
+                  <>
+                    <p className="text-gray-500 mb-6">
+                      Only you can see what you've saved
+                    </p>
+                    <div
+                      className={`rounded-full p-6 ${
+                        isDark ? "bg-gray-900" : "bg-gray-100"
+                      }`}
+                    >
+                      <BookmarkIcon className="w-12 h-12 text-gray-500" />
+                    </div>
+                    <h3 className="mt-4 text-2xl font-bold">No Saved Posts</h3>
+                    <p className="mt-2 text-gray-500 max-w-md">
+                      Save photos and videos that you want to see again. No one
+                      is notified, and only you can see what you've saved.
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div
+                  className={`rounded-full p-6 ${
+                    isDark ? "bg-gray-900" : "bg-gray-100"
+                  }`}
+                >
+                  <BookmarkIcon className="w-12 h-12 text-gray-500" />
+                </div>
+                <h3 className="mt-4 text-2xl font-bold">Private Collection</h3>
                 <p className="mt-2 text-gray-500">
-                  When {profileData?.username} shares photos, they will appear
-                  here.
+                  Saved posts can only be viewed by the account owner.
                 </p>
               </div>
             )}
           </>
         )}
 
-        {activeTab === "saved" && currentUser?.username === username && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-gray-500">Only you can see what you've saved</p>
-            <div
-              className={`mt-6 rounded-full p-6 ${
-                isDark ? "bg-gray-900" : "bg-gray-100"
-              }`}
-            >
-              <BookmarkIcon className="w-12 h-12 text-gray-500" />
-            </div>
-            <h3 className="mt-4 text-2xl font-bold">Save</h3>
-            <p className="mt-2 text-gray-500">
-              Save photos and videos that you want to see again.
-            </p>
-          </div>
-        )}
-
+        {/* TAGGED TAB */}
         {activeTab === "tagged" && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div
-              className={`rounded-full p-6 ${
-                isDark ? "bg-gray-900" : "bg-gray-100"
-              }`}
-            >
-              <TagIcon className="w-12 h-12 text-gray-500" />
-            </div>
-            <h3 className="mt-4 text-2xl font-bold">
-              Photos of {profileData?.username}
-            </h3>
-            <p className="mt-2 text-gray-500">
-              When people tag {profileData?.username} in photos, they'll appear
-              here.
-            </p>
+            {loading ? (
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            ) : (
+              <>
+                <div
+                  className={`rounded-full p-6 ${
+                    isDark ? "bg-gray-900" : "bg-gray-100"
+                  }`}
+                >
+                  <TagIcon className="w-12 h-12 text-gray-500" />
+                </div>
+                <h3 className="mt-4 text-2xl font-bold">
+                  {isOwnProfile
+                    ? "Photos of You"
+                    : `Photos of ${profileData?.username}`}
+                </h3>
+                <p className="mt-2 text-gray-500 max-w-md">
+                  {isOwnProfile
+                    ? "When people tag you in photos, they'll appear here."
+                    : `When people tag ${profileData?.username} in photos, they'll appear here.`}
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
-      {/* BlogCommentsPage component should be included in the main layout */}
+
+      {/* BlogCommentsPage component for post comments */}
       <BlogCommentsPage />
     </div>
   );

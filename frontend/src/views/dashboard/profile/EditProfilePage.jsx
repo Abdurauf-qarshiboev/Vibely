@@ -185,7 +185,7 @@ const EditProfilePage = () => {
         await checkUser();
 
         // Navigate back to profile page
-        navigate(`/user/${username}`);
+        navigate("/profile");
       } else {
         message.error(response.data.message || "Error updating profile");
       }

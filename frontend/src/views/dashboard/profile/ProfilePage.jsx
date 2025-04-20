@@ -9,7 +9,7 @@ import { useModalContext } from "../../../context/main/ModalContext";
 import { useTheme } from "@/context/ThemeContext";
 import { api } from "@/helpers/api";
 import { getImageUrl } from "../../../utils/ImageHelpers";
-import BlogCommentsPage from "../../../views/dashboard/blogs/BlogCommentsPage"; // Import the comments page component
+import BlogCommentsPage from "../../../views/dashboard/blogs/BlogCommentsPage";
 import {
   CameraIcon,
   PlusIcon,
@@ -19,10 +19,13 @@ import {
 } from "@heroicons/react/24/outline";
 import { PhotoIcon, BookmarkIcon, TagIcon } from "@heroicons/react/24/solid";
 import VerifiedBadge from "../../../components/VerifiedBadge";
-
+import { message, Tag } from "antd";
+import { Cog6ToothIcon } from "@heroicons/react/24/outline";
+import SettingsOptionsModal from "@/components/modals/SettingsOptionsModal";
+import PasswordUpdateModal from "@/components/modals/PasswordUpdateModal";
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { myblogs, myBlogs, loading } = useBlogsContext();
   const { setToggle } = useModalContext();
   const { theme } = useTheme();
@@ -34,14 +37,36 @@ const ProfilePage = () => {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [imageCache, setImageCache] = useState({});
   const { getCommentDraft, updateCommentDraft, submitComment } =
-      useCommentsContext();
-    const { processedText, handleHashtagClick } = useHashtagsContext();
+    useCommentsContext();
+  const { processedText, handleHashtagClick } = useHashtagsContext();
   const myBlogsFetched = useRef(false);
 
   // States for handling post comments view
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [selectedPostData, setSelectedPostData] = useState(null);
   const [loadingPostData, setLoadingPostData] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  // Add this function to handle settings options selection
+  const handleSettingsOption = (option) => {
+    setShowSettingsModal(false);
+
+    switch (option) {
+      case "password":
+        setShowPasswordModal(true);
+        break;
+      case "verify":
+        // Handle verification option
+        message.info("Verification feature coming soon");
+        break;
+      case "logout":
+        logout(); // Call the logout function from useAuth()
+        break;
+      default:
+        break;
+    }
+  };
 
   // Navigate to post creation page
   const handleCreatePost = () => {
@@ -88,7 +113,7 @@ const ProfilePage = () => {
           followersCount: user?.followersCount || 0,
           followingCount: user?.followingCount || 0,
           pronouns: "he/him",
-          links: [],
+          phone: user?.phone,
           email: user?.email || "",
           joinDate: formattedJoinDate,
         });
@@ -282,6 +307,7 @@ const ProfilePage = () => {
                 )}
 
                 <button
+                  onClick={() => setShowSettingsModal(true)}
                   className={`ml-2 p-2 rounded-lg ${
                     isDark ? "bg-gray-800" : "bg-gray-100"
                   }`}
@@ -325,11 +351,20 @@ const ProfilePage = () => {
               </div>
               <p className="text-sm">{profileData.bio}</p>
 
-              {/* Display username with @ */}
-              <div className="text-gray-500">@{profileData.username}</div>
-
+              {/* Display username with @ , email and phone*/}
+              <div className="flex items-center gap-2">
+                <Tag color="geekblue">
+                  @{profileData.username}
+                </Tag>
+                <Tag color="geekblue-inverse">
+                  {profileData.email}
+                </Tag>
+                <Tag color="blue">
+                  {profileData.phone}
+                </Tag>
+              </div>
               {/* Show join date */}
-              <div className="text-gray-500 text-sm">
+              <div className="text-gray-500 text-sm mt-1">
                 Joined {formatJoinDate(profileData.joinDate)}
               </div>
 
@@ -578,6 +613,16 @@ const ProfilePage = () => {
         )}
       </div>
       <BlogCommentsPage />
+      <SettingsOptionsModal
+        isOpen={showSettingsModal}
+        closeModal={() => setShowSettingsModal(false)}
+        onOptionSelect={handleSettingsOption}
+      />
+
+      <PasswordUpdateModal
+        isOpen={showPasswordModal}
+        closeModal={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 };

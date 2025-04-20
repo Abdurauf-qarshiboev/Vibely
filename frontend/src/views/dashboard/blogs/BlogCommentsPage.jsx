@@ -7,6 +7,7 @@ import {
   HeartIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
+import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { useBlogsContext } from "@/context/main/BlogsContext";
 import { useCommentsContext } from "@/context/main/CommentsContext";
 import { useModalContext } from "@/context/main/ModalContext";
@@ -16,10 +17,12 @@ import { useTheme } from "@/context/ThemeContext";
 import { Menu } from "@headlessui/react";
 import { Link, useNavigate } from "react-router-dom";
 import { Carousel } from "antd";
+import { toast } from "react-toastify";
 import { api } from "../../../helpers/api";
 import { getImageUrl } from "../../../utils/ImageHelpers";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import VerifiedBadge from "../../../components/VerifiedBadge";
+import CustomModal from "../../../components/modals/CustomModal";
 
 // Custom arrow components for the carousel
 const NextArrow = (props) => (
@@ -47,6 +50,7 @@ const BlogCommentsPage = () => {
   } = useCommentsContext();
   const { modalState, setToggle } = useModalContext();
   const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const { processedText, checkAndCreateHashtags } = useHashtagsContext();
@@ -65,9 +69,42 @@ const BlogCommentsPage = () => {
   const [commentText, setCommentText] = useState("");
   const [userAvatars, setUserAvatars] = useState({});
   const [visibleReplies, setVisibleReplies] = useState({});
-
   // Refs
   const textareaRef = useRef(null);
+
+  const [showPostOptions, setShowPostOptions] = useState(false);
+  const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
+
+  // Add these functions to handle post operations
+  const handleEditPost = () => {
+    setShowPostOptions(false);
+    close(); // Close the comments page first
+
+    // Add a small delay before navigation to ensure modal closes properly
+    setTimeout(() => {
+      navigate(`/edit-post/${blog.id}`);
+    }, 100);
+  };
+
+  const handleDeletePost = () => {
+    setShowPostOptions(false);
+    setIsDeleteConfirmVisible(true);
+  };
+
+  const confirmDeletePost = async () => {
+    try {
+      await api.delete(`/posts/${blog.id}`);
+      toast.success("Post deleted successfully");
+      close(); // Close the comments page
+      // Optionally: refresh the feed or navigate back
+      navigate(-1);
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast.error(error.response?.data?.message || "Failed to delete post");
+    } finally {
+      setIsDeleteConfirmVisible(false);
+    }
+  };
 
   // Helper function to convert blob to data URL
   const blobToDataURL = (blob) => {
@@ -782,7 +819,17 @@ const BlogCommentsPage = () => {
               alt=""
               className="w-8 h-8 rounded-full bg-gray-100 cursor-pointer"
               onClick={() => {
-                navigate(`/user/${comment.user?.username}`);
+                // Check if this is the current logged-in user
+                const isCurrentUser =
+                  currentUser &&
+                  comment.user?.username === currentUser.username; // Changed from blog.user to comment.user
+
+                if (isCurrentUser) {
+                  navigate("/profile"); // Navigate to current user's profile page
+                } else {
+                  navigate(`/user/${comment.user?.username}`); // Navigate to other user's profile - also changed from blog.user
+                }
+
                 close();
               }}
               onError={(e) => {
@@ -798,11 +845,23 @@ const BlogCommentsPage = () => {
               <div className="flex-1">
                 <div className="flex items-baseline flex-wrap">
                   <span
-                    className={`font-semibold flex items-center text-sm mr-2 hover:text-black cursor-pointer ${
-                      isDark ? "text-white" : "text-gray-800"
+                    className={`font-semibold flex items-center text-sm mr-2 cursor-pointer ${
+                      isDark
+                        ? "text-white"
+                        : "text-gray-800 hover:text-gray-700"
                     }`}
                     onClick={() => {
-                      navigate(`/user/${comment.user?.username}`);
+                      // Check if this is the current logged-in user
+                      const isCurrentUser =
+                        currentUser &&
+                        comment.user?.username === currentUser.username; // Changed from blog.user to comment.user
+
+                      if (isCurrentUser) {
+                        navigate("/profile"); // Navigate to current user's profile page
+                      } else {
+                        navigate(`/user/${comment.user?.username}`); // Navigate to other user's profile - also changed from blog.user
+                      }
+
                       close();
                     }}
                   >
@@ -1112,12 +1171,25 @@ const BlogCommentsPage = () => {
                   {/* User info */}
                   <div
                     className={`w-full flex items-center gap-x-3 px-3 lg:px-4 py-3 border-b ${
-                      isDark ? "border-gray-800" : "border-gray-200"
+                      isDark ? "border-white/30" : "border-gray-200"
                     }`}
                   >
                     <div className="flex-none">
                       <img
-                        onClick={() => navigate(`/user/${blog.user?.username}`)}
+                        onClick={() => {
+                          // Check if this is the current logged-in user
+                          const isCurrentUser =
+                            currentUser &&
+                            blog.user?.username === currentUser.username;
+
+                          if (isCurrentUser) {
+                            navigate("/profile"); // Navigate to current user's profile page
+                          } else {
+                            navigate(`/user/${blog.user?.username}`); // Navigate to other user's profile
+                          }
+
+                          close();
+                        }}
                         src={
                           avatarUrl ||
                           "https://placehold.co/80x80/gray/white?text=User"
@@ -1138,10 +1210,21 @@ const BlogCommentsPage = () => {
                         }`}
                       >
                         <div
-                          onClick={() =>
-                            navigate(`/user/${blog.user?.username}`)
-                          }
-                          className={`font-semibold leading-5 text-sm hover:underline ${
+                          onClick={() => {
+                            // Check if this is the current logged-in user
+                            const isCurrentUser =
+                              currentUser &&
+                              blog.user?.username === currentUser.username;
+
+                            if (isCurrentUser) {
+                              navigate("/profile"); // Navigate to current user's profile page
+                            } else {
+                              navigate(`/user/${blog.user?.username}`); // Navigate to other user's profile
+                            }
+
+                            close();
+                          }}
+                          className={`font-semibold leading-5 text-sm ${
                             isDark
                               ? "text-white hover:text-gray-300"
                               : "hover:text-gray-700"
@@ -1152,7 +1235,71 @@ const BlogCommentsPage = () => {
                         {blog.user?.verified && <VerifiedBadge />}
                       </span>
                     </div>
+                    {/* Show options menu only for the post owner */}
+                    {currentUser &&
+                      blog.user?.username === currentUser.username && (
+                        <div className="relative ml-auto">
+                          <button
+                            className={`p-1 rounded-full ${
+                              isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+                            }`}
+                            onClick={() => setShowPostOptions(!showPostOptions)}
+                          >
+                            <EllipsisVerticalIcon className="h-5 w-5" />
+                          </button>
+
+                          {/* Options dropdown */}
+                          {showPostOptions && (
+                            <div
+                              className={`absolute right-0 mt-1 w-36 rounded-md shadow-lg z-50 ${
+                                isDark
+                                  ? "bg-gray-800"
+                                  : "bg-white border border-gray-200"
+                              }`}
+                            >
+                              <div className="py-1">
+                                <button
+                                  onClick={handleEditPost}
+                                  className={`block w-full text-left px-4 py-2 text-sm ${
+                                    isDark
+                                      ? "text-white hover:bg-gray-700"
+                                      : "text-gray-700 hover:bg-gray-100"
+                                  }`}
+                                >
+                                  Edit Post
+                                </button>
+                                <button
+                                  onClick={handleDeletePost}
+                                  className={`block w-full text-left px-4 py-2 text-sm text-red-600 ${
+                                    isDark
+                                      ? "hover:bg-gray-700"
+                                      : "hover:bg-gray-100"
+                                  }`}
+                                >
+                                  Delete Post
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                   </div>
+
+                  {/* Delete Confirmation Modal */}
+                  <CustomModal
+                    title="Delete Post"
+                    isOpen={isDeleteConfirmVisible}
+                    onClose={() => setIsDeleteConfirmVisible(false)}
+                    onOk={confirmDeletePost}
+                    okText="Delete"
+                    cancelText="Cancel"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <p>
+                      Are you sure you want to delete this post? This action
+                      cannot be undone.
+                    </p>
+                  </CustomModal>
 
                   {/* Comments section */}
                   <div
@@ -1161,12 +1308,23 @@ const BlogCommentsPage = () => {
                     } scrollbar-hidden`}
                   >
                     {/* Blog text */}
-                    <div className="flex gap-x-3 pb-4 mb-4 border-b border-gray-200 dark:border-gray-800">
+                    <div className="flex gap-x-3 pb-4 mb-4 border-b border-gray-200 dark:border-white/30">
                       <div className="flex-none">
                         <img
-                          onClick={() =>
-                            navigate(`/user/${blog.user?.username}`)
-                          }
+                          onClick={() => {
+                            // Check if this is the current logged-in user
+                            const isCurrentUser =
+                              currentUser &&
+                              blog.user?.username === currentUser.username;
+
+                            if (isCurrentUser) {
+                              navigate("/profile"); // Navigate to current user's profile page
+                            } else {
+                              navigate(`/user/${blog.user?.username}`); // Navigate to other user's profile
+                            }
+
+                            close();
+                          }}
                           src={
                             avatarUrl ||
                             "https://placehold.co/80x80/gray/white?text=User"
@@ -1184,10 +1342,21 @@ const BlogCommentsPage = () => {
                         <div className="flex items-baseline justify-between gap-x-3">
                           <span className="flex items-center gap-1 cursor-pointer">
                             <div
-                              onClick={() =>
-                                navigate(`/user/${blog.user?.username}`)
-                              }
-                              className={`font-semibold text-sm hover:underline ${
+                              onClick={() => {
+                                // Check if this is the current logged-in user
+                                const isCurrentUser =
+                                  currentUser &&
+                                  blog.user?.username === currentUser.username;
+
+                                if (isCurrentUser) {
+                                  navigate("/profile"); // Navigate to current user's profile page
+                                } else {
+                                  navigate(`/user/${blog.user?.username}`); // Navigate to other user's profile
+                                }
+
+                                close();
+                              }}
+                              className={`font-semibold text-sm ${
                                 isDark
                                   ? "text-white hover:text-gray-300"
                                   : "hover:text-gray-700"
@@ -1234,7 +1403,7 @@ const BlogCommentsPage = () => {
                               ))}
                             </div>
                           )}
-                          <div className="text-xs text-gray-500 mt-2">
+                          <div className="text-xs text-left text-gray-500 mt-2">
                             {timeSince(blog.createdAt)}
                           </div>
                         </div>
@@ -1257,7 +1426,7 @@ const BlogCommentsPage = () => {
                             {visibleReplies[comment.id] &&
                               comment.replies &&
                               comment.replies.length > 0 && (
-                                <div className="pl-10 ml-1 border-l border-gray-200 dark:border-gray-700 mt-2">
+                                <div className="pl-10 ml-1 border-l border-gray-200 dark:border-white/30 mt-2">
                                   {comment.replies.map((reply) => (
                                     <CommentItem
                                       key={reply.id}
@@ -1278,7 +1447,7 @@ const BlogCommentsPage = () => {
                   </div>
 
                   {/* Bottom actions section */}
-                  <div className="w-full border-t border-gray-200 dark:border-gray-800">
+                  <div className="w-full border-t border-gray-200 dark:border-white/30">
                     {/* Like and comment buttons */}
                     <div className="w-full flex items-center gap-x-3 px-4 py-2">
                       <button
@@ -1330,15 +1499,15 @@ const BlogCommentsPage = () => {
                     {/* Comment form */}
                     <div
                       className={`w-full mt-1 py-3 px-4 flex items-center space-x-2 border-t ${
-                        isDark ? "border-gray-800" : "border-gray-200"
+                        isDark ? "border-white/30" : "border-gray-200"
                       }`}
                     >
                       {replyingTo && (
-                        <div className="flex items-center text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md mr-2">
+                        <div className="flex items-center text-xs bg-gray-500 text-white px-2 py-1 rounded-md">
                           Replying to @{replyingTo}
                           <button
                             onClick={cancelReply}
-                            className="ml-2 text-gray-500"
+                            className="ml-2 text-white"
                           >
                             <XMarkIcon className="w-3 h-3" />
                           </button>
