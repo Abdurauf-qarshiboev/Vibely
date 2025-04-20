@@ -2,21 +2,18 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "../../../helpers/api";
-import { useToast } from "@/context/ToastContext";
+import { message } from "antd";
 import { useTheme } from "@/context/ThemeContext";
 
 const EditProfilePage = () => {
-  const { user, refreshUser } = useAuth();
+  const { user, checkUser } = useAuth();
   const navigate = useNavigate();
-  const { showToast } = useToast();
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const fileInputRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
-  const [avatarLoading, setAvatarLoading] = useState(false);
   const [formData, setFormData] = useState({
-    username: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -24,6 +21,7 @@ const EditProfilePage = () => {
     bio: "",
     private: false,
   });
+  const [username, setUsername] = useState(""); // Store username separately
   const [formErrors, setFormErrors] = useState({});
   const [avatar, setAvatar] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -32,7 +30,6 @@ const EditProfilePage = () => {
   useEffect(() => {
     if (user) {
       setFormData({
-        username: user.username || "",
         firstName: user.firstName || "",
         lastName: user.lastName || "",
         email: user.email || "",
@@ -40,12 +37,20 @@ const EditProfilePage = () => {
         bio: user.bio || "",
         private: user.private || false,
       });
+      setUsername(user.username || "");
 
       // Load avatar preview if exists
       if (user.avatar) {
         fetchAvatar(user.avatar);
       }
     }
+
+    // Cleanup function
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
   }, [user]);
 
   const fetchAvatar = async (avatarId) => {
@@ -84,56 +89,28 @@ const EditProfilePage = () => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         // 5MB limit
-        showToast("Avatar image must be less than 5MB", "error");
+        message.error("Avatar image must be less than 5MB");
         return;
       }
 
       if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
-        showToast("Only JPEG, JPG and PNG images are allowed", "error");
+        message.error("Only JPEG, JPG and PNG images are allowed");
         return;
       }
 
       setAvatar(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
 
-  const uploadAvatar = async () => {
-    if (!avatar) return null;
-
-    setAvatarLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("image", avatar);
-
-      const response = await api.post("/images", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (response.data && response.data.success) {
-        return response.data.data.id;
+      // Clean up previous preview URL
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
       }
-      return null;
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      showToast("Error uploading avatar image", "error");
-      return null;
-    } finally {
-      setAvatarLoading(false);
+
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
   const validateForm = () => {
     const errors = {};
-
-    // Username validation
-    if (!formData.username.trim()) {
-      errors.username = "Username is required";
-    } else if (formData.username.length < 3) {
-      errors.username = "Username must be at least 3 characters";
-    }
 
     // Email validation
     if (!formData.email.trim()) {
@@ -166,46 +143,57 @@ const EditProfilePage = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      showToast("Please fix the form errors", "error");
+      message.error("Please fix the form errors");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Upload avatar if changed
-      let avatarId = null;
+      // Create FormData object following CreatePostsPage pattern
+      const formDataToSend = new FormData();
+
+      // Create userData object (excluding username)
+      const userData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        bio: formData.bio || "",
+        private: formData.private,
+      };
+
+      // Add profile data as JSON string
+      formDataToSend.append("request", JSON.stringify(userData));
+
+      // Add avatar if changed
       if (avatar) {
-        avatarId = await uploadAvatar();
-      }
-
-      // Prepare data for API
-      const profileData = { ...formData };
-
-      // Add avatar ID if uploaded
-      if (avatarId) {
-        profileData.avatar = avatarId;
+        formDataToSend.append("avatar", avatar);
       }
 
       // Update profile
-      const response = await api.put("/users/profile", profileData);
+      const response = await api.put("/users/profile", formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data && response.data.success) {
-        showToast("Profile updated successfully", "success");
+        message.success("Profile updated successfully");
 
         // Refresh user data
-        await refreshUser();
+        await checkUser();
 
         // Navigate back to profile page
-        navigate(`/user/${formData.username}`);
+        navigate(`/user/${username}`);
       } else {
-        showToast(response.data.message || "Error updating profile", "error");
+        message.error(response.data.message || "Error updating profile");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
       const errorMessage =
         error.response?.data?.message || "Error updating profile";
-      showToast(errorMessage, "error");
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -219,6 +207,9 @@ const EditProfilePage = () => {
 
   const removeAvatar = () => {
     setAvatar(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setPreviewUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -295,34 +286,34 @@ const EditProfilePage = () => {
             </div>
           </div>
 
-          {/* Username Field */}
+          {/* Username Field - Read Only */}
           <div>
             <label
               htmlFor="username"
               className="block text-sm font-medium mb-1"
             >
-              Username <span className="text-red-500">*</span>
+              Username
             </label>
             <input
               id="username"
               name="username"
               type="text"
-              value={formData.username}
-              onChange={handleChange}
+              value={username}
+              disabled
               className={`w-full px-3 py-2 border ${
-                formErrors.username
-                  ? "border-red-500"
-                  : isDark
-                  ? "border-gray-700 bg-gray-800"
-                  : "border-gray-300 bg-white"
-              } rounded-md focus:outline-none ${
-                isDark ? "focus:border-blue-400" : "focus:border-blue-500"
-              }`}
+                isDark
+                  ? "border-gray-700 bg-gray-700 text-gray-400"
+                  : "border-gray-300 bg-gray-100 text-gray-500"
+              } rounded-md cursor-not-allowed`}
               placeholder="Username"
             />
-            {formErrors.username && (
-              <p className="text-red-500 text-xs mt-1">{formErrors.username}</p>
-            )}
+            <p
+              className={`text-xs mt-1 ${
+                isDark ? "text-gray-400" : "text-gray-500"
+              }`}
+            >
+              Username cannot be changed
+            </p>
           </div>
 
           {/* First Name and Last Name - Side by Side */}
@@ -520,14 +511,12 @@ const EditProfilePage = () => {
             </button>
             <button
               type="submit"
-              disabled={loading || avatarLoading}
+              disabled={loading}
               className={`px-4 py-2 rounded-md bg-blue-600 text-white ${
-                loading || avatarLoading
-                  ? "opacity-70 cursor-not-allowed"
-                  : "hover:bg-blue-700"
+                loading ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-700"
               }`}
             >
-              {loading || avatarLoading ? (
+              {loading ? (
                 <span className="flex items-center">
                   <svg
                     className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"

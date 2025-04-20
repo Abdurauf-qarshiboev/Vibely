@@ -226,6 +226,7 @@ const ProfilePage = () => {
               </div>
             ) : (
               <button
+                onClick={() => navigate("/edit-profile")}
                 className={`w-full h-full rounded-full flex items-center justify-center ${
                   isDark ? "bg-gray-800" : "bg-gray-200"
                 }`}
@@ -235,7 +236,10 @@ const ProfilePage = () => {
             )}
 
             {isOwnProfile && (
-              <button className="absolute bottom-1 right-1 rounded-full bg-blue-500 p-1">
+              <button
+                onClick={() => navigate("/edit-profile")}
+                className="absolute bottom-1 right-1 rounded-full bg-blue-500 p-1"
+              >
                 <PlusIcon className="w-5 h-5 text-white" />
               </button>
             )}
@@ -255,6 +259,7 @@ const ProfilePage = () => {
               <div className="flex sm:ml-4">
                 {isOwnProfile ? (
                   <button
+                    onClick={() => navigate("/edit-profile")}
                     className={`px-4 py-1 rounded-lg font-medium ${
                       isDark ? "bg-gray-800" : "bg-gray-100"
                     }`}

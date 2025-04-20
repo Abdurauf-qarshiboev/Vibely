@@ -33,7 +33,9 @@ const ProfilePage = lazy(() =>
   import("../views/dashboard/profile/ProfilePage")
 );
 const UserProfilePage = lazy(() => import("../views/dashboard/profile/UserProfile"))
-
+const EditProfilePage = lazy(() =>
+  import("../views/dashboard/profile/EditProfilePage")
+);
 // Loading component
 const Loading = () => (
   <div className="flex items-center justify-center h-screen text-white font-bold">Loading...</div>
@@ -143,6 +145,7 @@ const AppRoutes = () => {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="blogs/:id" element={<EditBlogs />} />
           <Route path="/user/:username" element={<UserProfilePage />} />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
         </Route>
 
         {/* Auth Routes */}
