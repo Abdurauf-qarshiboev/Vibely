@@ -2,6 +2,7 @@ package com.webdev.project.backend.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webdev.project.backend.dto.UserDTO;
+import com.webdev.project.backend.dto.UserExtendedDTO;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.enums.UserRole;
 import com.webdev.project.backend.repositories.UserRepository;
@@ -9,6 +10,7 @@ import com.webdev.project.backend.requests.RegistrationRequest;
 import com.webdev.project.backend.requests.UpdatePasswordRequest;
 import com.webdev.project.backend.responses.LoginSuccessResponse;
 import com.webdev.project.backend.services.CustomUserDetailsService;
+import com.webdev.project.backend.services.FollowService;
 import com.webdev.project.backend.services.ImageService;
 import com.webdev.project.backend.utils.JwtUtils;
 import com.webdev.project.backend.requests.LoginRequest;
@@ -37,14 +39,16 @@ public class AuthController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final ImageService imageService;
+    private final FollowService followService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, CustomUserDetailsService userDetailsService, UserService userService, UserRepository userRepository, ImageService imageService) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtils jwtUtils, CustomUserDetailsService userDetailsService, UserService userService, UserRepository userRepository, ImageService imageService, FollowService followService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.userService = userService;
         this.userRepository = userRepository;
         this.imageService = imageService;
+        this.followService = followService;
     }
 
     @PostMapping("/login")
@@ -148,9 +152,16 @@ public class AuthController {
                 return ResponseUtil.error("AUTH_004", "User not found", HttpStatus.NOT_FOUND);
             }
 
+            User user = userOptional.get();
+
             // Create DTO and return response
-            UserDTO userDTO = new UserDTO(userOptional.get());
-            ResponseEntity<UserDTO> originalResponse = new ResponseEntity<>(userDTO, HttpStatus.OK);
+            UserExtendedDTO userDTO = new UserExtendedDTO(userOptional.get());
+            userDTO.setFollowerCount(followService.getFollowersCount(user));
+            userDTO.setFollowingCount(followService.getFollowingsCount(user));
+            userDTO.setFollowedByYou(false);
+            userDTO.setFollowingYou(false);
+
+            ResponseEntity<UserExtendedDTO> originalResponse = new ResponseEntity<>(userDTO, HttpStatus.OK);
             return ResponseUtil.success(originalResponse, "User authenticated");
 
         } catch (Exception e) {
