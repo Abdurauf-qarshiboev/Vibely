@@ -83,10 +83,23 @@ const Comment = ({
     try {
       const response = await api.get(`/comments/${comment.id}/replies`);
       if (response.data && response.data.success) {
-        setReplies(response.data.data || []);
+        // Ensure we're getting an array, even if it's empty
+        const repliesData = response.data.data || [];
+
+        // If the API returns an object with a replies property, use that
+        const repliesList = Array.isArray(repliesData)
+          ? repliesData
+          : repliesData.replies && Array.isArray(repliesData.replies)
+          ? repliesData.replies
+          : [];
+
+        setReplies(repliesList);
+      } else {
+        setReplies([]);
       }
     } catch (error) {
       console.error("Error loading replies:", error);
+      setReplies([]);
     } finally {
       setLoading(false);
     }
@@ -100,9 +113,7 @@ const Comment = ({
         <div className="flex-none">
           <img
             src={
-              comment.user?.avatar
-                ? `data:image/jpeg;base64,${comment.user.avatar}`
-                : "https://placehold.co/80x80/gray/white?text=User"
+              "https://placehold.co/80x80/gray/white?text=User"
             }
             alt=""
             className="w-8 h-8 rounded-full bg-gray-100 cursor-pointer"
@@ -203,22 +214,29 @@ const Comment = ({
                     </div>
                   )}
 
-                  {replies.map((reply) => (
-                    <Comment
-                      key={reply.id}
-                      comment={reply}
-                      postId={postId}
-                      handleEditComment={handleEditComment}
-                      handleRemoveComment={handleRemoveComment}
-                      timeSince={timeSince}
-                      isDark={isDark}
-                      currentUser={currentUser}
-                      processedText={processedText}
-                      toggleCommentExpansion={toggleCommentExpansion}
-                      expandedComments={expandedComments}
-                      handleReply={handleReply}
-                    />
-                  ))}
+                  {/* Fix the error by ensuring replies is an array before mapping */}
+                  {Array.isArray(replies) ? (
+                    replies.map((reply) => (
+                      <Comment
+                        key={reply.id}
+                        comment={reply}
+                        postId={postId}
+                        handleEditComment={handleEditComment}
+                        handleRemoveComment={handleRemoveComment}
+                        timeSince={timeSince}
+                        isDark={isDark}
+                        currentUser={currentUser}
+                        processedText={processedText}
+                        toggleCommentExpansion={toggleCommentExpansion}
+                        expandedComments={expandedComments}
+                        handleReply={handleReply}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      No replies available
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1009,11 +1027,11 @@ const BlogCommentsPage = () => {
                       }`}
                     >
                       {replyingTo && (
-                        <div className="flex items-center text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md mr-2">
+                        <div className="flex items-center text-xs bg-gray-100 px-1 py-1 rounded-md">
                           Replying to @{replyingTo}
                           <button
                             onClick={cancelReply}
-                            className="ml-2 text-gray-500"
+                            className="ml-1 text-gray-600"
                           >
                             <XMarkIcon className="w-3 h-3" />
                           </button>
