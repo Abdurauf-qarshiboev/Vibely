@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Empty, Spin, Carousel } from "antd";
+import { Link } from "react-router-dom";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 import { useBlogsContext } from "../../../context/main/BlogsContext";
 import { useModalContext } from "../../../context/main/ModalContext";
@@ -272,14 +273,14 @@ const AllBlogsTable = () => {
                       isDark ? "text-white" : "text-black"
                     }`}
                   >
-                    <a
-                      href="#"
+                    <Link
+                      to={`/user/${blog.user?.username}`}
                       className={`font-semibold w-fit ${
                         isDark ? "text-white" : "text-black"
-                      }`}
+                      } `}
                     >
                       {blog.user?.username || "user"}
-                    </a>
+                    </Link>
                     {blog.user?.verified && <VerifiedBadge />}
                   </span>
                   <span className="hidden sm:block">·</span>
@@ -387,14 +388,14 @@ const AllBlogsTable = () => {
                         isDark ? "text-white" : "text-black"
                       }`}
                     >
-                      <a
-                        href="#"
+                      <Link
+                        to={`/user/${blog.user?.username}`}
                         className={`font-semibold w-fit ${
                           isDark ? "text-white" : "text-black"
-                        }`}
+                        } `}
                       >
-                        {blog.user?.username}
-                      </a>
+                        {blog.user?.username || "user"}
+                      </Link>
                       {blog.user?.verified && <VerifiedBadge />}
                     </span>
                     {blog.title}

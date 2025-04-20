@@ -32,6 +32,7 @@ const EditBlogs = lazy(() => import("../views/dashboard/blogs/EditPost"));
 const ProfilePage = lazy(() =>
   import("../views/dashboard/profile/ProfilePage")
 );
+const UserProfilePage = lazy(() => import("../views/dashboard/profile/UserProfile"))
 
 // Loading component
 const Loading = () => (
@@ -141,6 +142,7 @@ const AppRoutes = () => {
           <Route path="create" element={<CreatePostsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="blogs/:id" element={<EditBlogs />} />
+          <Route path="/user/:username" element={<UserProfilePage />} />
         </Route>
 
         {/* Auth Routes */}
