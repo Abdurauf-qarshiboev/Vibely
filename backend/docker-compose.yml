@@ -17,8 +17,16 @@ services:
       - SPRING_JPA_SHOW_SQL=true
       - SPRING_SECURITY_USER_NAME=admin
       - SPRING_SECURITY_USER_PASSWORD=0000
+      - RABBIT_HOST=rabbitmq
+      - RABBIT_USER=kalo
+      - RABBIT_PASS=kalo
+      - RABBIT_PORT=5672
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
     restart: unless-stopped
     networks:
       - app-network
@@ -46,14 +54,14 @@ services:
       timeout: 5s
       retries: 5
 
-  # RabbitMQ
+  # RabbitMQ Message Broker
   rabbitmq:
     image: rabbitmq:latest
-    container_name: rabbitmq
+    container_name: web-project2-rabbitmq
     restart: always
     ports:
-      - 5672:5672
-      - 15672:15672
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: kalo
       RABBITMQ_DEFAULT_PASS: kalo
@@ -63,6 +71,13 @@ services:
     volumes:
       - rabbitmq-lib:/var/lib/rabbitmq/
       - rabbitmq-log:/var/log/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
 networks:
   app-network:
