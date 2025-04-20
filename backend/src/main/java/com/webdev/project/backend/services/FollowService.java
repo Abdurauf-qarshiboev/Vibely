@@ -135,4 +135,8 @@ public class FollowService {
     public Integer getFollowingsCount(User user) {
         return followRepository.getFollowsCountByFollower(user);
     }
+
+    public Boolean isFollowerFollowed(User follower, User followed) {
+        return followRepository.existsByFollowerAndFollowedAndIsApprovedTrue(follower, followed);
+    }
 }

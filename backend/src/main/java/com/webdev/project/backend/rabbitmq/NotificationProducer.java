@@ -29,6 +29,7 @@ public class NotificationProducer {
                     actor.getId(),
                     NotificationType.LIKE_POST,
                     post.getId(),
+                    null,
                     null
             );
         } else if (comment != null && post == null) {
@@ -37,7 +38,8 @@ public class NotificationProducer {
                     actor.getId(),
                     NotificationType.LIKE_COMMENT,
                     null,
-                    comment.getId()
+                    comment.getId(),
+                    null
             );
         } else {
             return;
@@ -60,6 +62,7 @@ public class NotificationProducer {
                     actor.getId(),
                     notificationType,
                     post.getId(),
+                    null,
                     null
             );
         } else if (notificationType == NotificationType.COMMENT_REPLY) {
@@ -68,7 +71,8 @@ public class NotificationProducer {
                     actor.getId(),
                     notificationType,
                     null,
-                    comment.getId()
+                    comment.getId(),
+                    null
             );
         } else {
             return;
@@ -82,11 +86,13 @@ public class NotificationProducer {
     }
 
     public void sendFollowNotification(User recipient, User actor) {
-        NotificationFollowMessage message = new NotificationFollowMessage(
+        NotificationMessage message = new NotificationMessage(
                 recipient.getId(),
                 actor.getId(),
+                NotificationType.FOLLOW,
                 null,
-                NotificationType.FOLLOW
+                null,
+                null
         );
 
         rabbitTemplate.convertAndSend(
@@ -97,11 +103,13 @@ public class NotificationProducer {
     }
 
     public void sendFollowRequestNotification(User recipient, User actor, Follow follow) {
-        NotificationFollowMessage message = new NotificationFollowMessage(
+        NotificationMessage message = new NotificationMessage(
                 recipient.getId(),
                 actor.getId(),
-                follow.getId(),
-                NotificationType.FOLLOW_REQUEST
+                NotificationType.FOLLOW_REQUEST,
+                null,
+                null,
+                follow.getId()
         );
 
         rabbitTemplate.convertAndSend(
@@ -112,11 +120,13 @@ public class NotificationProducer {
     }
 
     public void sendFollowRequestAcceptNotification(User recipient, User actor) {
-        NotificationFollowMessage message = new NotificationFollowMessage(
+        NotificationMessage message = new NotificationMessage(
                 recipient.getId(),
                 actor.getId(),
+                NotificationType.FOLLOW_ACCEPT,
                 null,
-                NotificationType.FOLLOW_ACCEPT
+                null,
+                null
         );
 
         rabbitTemplate.convertAndSend(
@@ -127,11 +137,13 @@ public class NotificationProducer {
     }
 
     public void sendFollowRequestRejectNotification(User recipient, User actor) {
-        NotificationFollowMessage message = new NotificationFollowMessage(
+        NotificationMessage message = new NotificationMessage(
                 recipient.getId(),
                 actor.getId(),
+                NotificationType.FOLLOW_REJECT,
                 null,
-                NotificationType.FOLLOW_REJECT
+                null,
+                null
         );
 
         rabbitTemplate.convertAndSend(

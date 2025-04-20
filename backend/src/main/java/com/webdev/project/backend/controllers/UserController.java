@@ -38,18 +38,36 @@ public class UserController {
 
     // Get user by username
     @GetMapping("/{username}")
-    public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
+    public ResponseEntity<?> getUserByUsername(
+            @PathVariable String username,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
 
         try {
-            Optional<User> user = userService.findByUsername(username);
 
-            if (user.isEmpty()) {
+            if (userDetails == null) {
+                return ResponseUtil.error("UBU_005", "Not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+
+            Optional<User> targetUserOptional = userService.findByUsername(username);
+
+            if (targetUserOptional.isEmpty()) {
                 return ResponseUtil.error("UBU_002", "User profile is not found", HttpStatus.NOT_FOUND);
             }
 
-            UserExtendedDTO userDTO = new UserExtendedDTO(user.get());
-            userDTO.setFollowerCount(followService.getFollowersCount(user.get()));
-            userDTO.setFollowingCount(followService.getFollowingsCount(user.get()));
+            Optional<User> currentUserOptional = userService.findByUsername(userDetails.getUsername());
+            if (currentUserOptional.isEmpty()) {
+                return ResponseUtil.error("UBU_002", "User profile is not found", HttpStatus.NOT_FOUND);
+            }
+
+            User targetUser = targetUserOptional.get();
+            User currentUser = currentUserOptional.get();
+
+            UserExtendedDTO userDTO = new UserExtendedDTO(targetUser);
+            userDTO.setFollowerCount(followService.getFollowersCount(targetUser));
+            userDTO.setFollowingCount(followService.getFollowingsCount(targetUser));
+            userDTO.setFollowedByYou(followService.isFollowerFollowed(currentUser, targetUser));
+            userDTO.setFollowingYou(followService.isFollowerFollowed(targetUser, currentUser));
 
             return ResponseUtil.success(
                     new ResponseEntity<>(userDTO, HttpStatus.CREATED),

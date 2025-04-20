@@ -16,6 +16,8 @@ public class UserExtendedDTO {
     private final String avatar;
     private Integer followerCount;
     private Integer followingCount;
+    private Boolean isFollowingYou;
+    private Boolean isFollowedByYou;
     private final Boolean is_private;
     private final Boolean is_verified;
     private final Timestamp created_at;
@@ -94,5 +96,21 @@ public class UserExtendedDTO {
 
     public Timestamp getCreated_at() {
         return created_at;
+    }
+
+    public Boolean getFollowingYou() {
+        return isFollowingYou;
+    }
+
+    public void setFollowingYou(Boolean followingYou) {
+        isFollowingYou = followingYou;
+    }
+
+    public Boolean getFollowedByYou() {
+        return isFollowedByYou;
+    }
+
+    public void setFollowedByYou(Boolean followedByYou) {
+        isFollowedByYou = followedByYou;
     }
 }
