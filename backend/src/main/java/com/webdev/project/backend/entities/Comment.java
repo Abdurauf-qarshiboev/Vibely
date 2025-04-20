@@ -32,6 +32,9 @@ public class Comment {
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Like> likes = new ArrayList<>();
 
+    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notification> notifications = new ArrayList<>();
+
     @Column(nullable = false, columnDefinition = "TEXT")
     @Size(min = 1, max = 2000)
     private String body;
@@ -128,5 +131,13 @@ public class Comment {
 
     public Timestamp getUpdatedAt() {
         return updatedAt;
+    }
+
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(List<Notification> notifications) {
+        this.notifications = notifications;
     }
 }

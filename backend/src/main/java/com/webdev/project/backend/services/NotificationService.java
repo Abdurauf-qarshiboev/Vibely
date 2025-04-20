@@ -1,6 +1,5 @@
 package com.webdev.project.backend.services;
 
-import com.webdev.project.backend.dto.NotificationDTO;
 import com.webdev.project.backend.dto.NotificationsResponseDTO;
 import com.webdev.project.backend.entities.*;
 import com.webdev.project.backend.enums.NotificationType;

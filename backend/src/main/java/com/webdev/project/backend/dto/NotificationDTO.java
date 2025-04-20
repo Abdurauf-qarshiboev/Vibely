@@ -1,9 +1,11 @@
 package com.webdev.project.backend.dto;
 
 import com.webdev.project.backend.entities.Notification;
+import lombok.Getter;
 
 import java.sql.Timestamp;
 
+@Getter
 public class NotificationDTO {
     private final Long id;
     private final String type;
@@ -11,6 +13,7 @@ public class NotificationDTO {
     private final Timestamp createdAt;
     private final UserDTO fromUser;
     private final PostDTO post;
+    private final Integer followId;
     private final CommentDTO comment;
 
     public NotificationDTO(Notification notification) {
@@ -21,13 +24,13 @@ public class NotificationDTO {
         this.fromUser = notification.getFromUser() != null ? new UserDTO(notification.getFromUser()) : null;
         this.post = notification.getPost() != null ? new PostDTO(notification.getPost()) : null;
         this.comment = notification.getComment() != null ? new CommentDTO(notification.getComment()) : null;
+
+        if (notification.getFollow() != null) {
+            this.followId = Math.toIntExact(notification.getFollow().getId());
+        } else {
+            this.followId = null;
+        }
+
     }
 
-    public Long getId() { return id; }
-    public String getType() { return type; }
-    public Boolean getRead() { return read; }
-    public Timestamp getCreatedAt() { return createdAt; }
-    public UserDTO getFromUser() { return fromUser; }
-    public PostDTO getPost() { return post; }
-    public CommentDTO getComment() { return comment; }
 }

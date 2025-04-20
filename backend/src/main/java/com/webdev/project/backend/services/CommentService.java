@@ -3,7 +3,9 @@ package com.webdev.project.backend.services;
 import com.webdev.project.backend.entities.Comment;
 import com.webdev.project.backend.entities.Post;
 import com.webdev.project.backend.entities.User;
+import com.webdev.project.backend.enums.NotificationType;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
+import com.webdev.project.backend.rabbitmq.NotificationProducer;
 import com.webdev.project.backend.repositories.CommentRepository;
 import com.webdev.project.backend.repositories.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +25,9 @@ public class CommentService {
     @Autowired
     private PostRepository postRepository;
 
-    /**
-     * Add a new comment to a post
-     */
+    @Autowired
+    private NotificationProducer notificationProducer;
+
     @Transactional
     public Comment addComment(User user, Post post, String body, Long parentCommentId) {
         Comment comment = new Comment();
@@ -50,6 +52,22 @@ public class CommentService {
         // Increment comment count on post
         post.setCommentCount(post.getCommentCount() + 1);
         postRepository.save(post);
+
+        // Send notification (async)
+        if (!user.getId().equals(post.getUser().getId())) { // Skip if commenting/replying to his own post/comment
+            if (parentCommentId != null) {
+
+                Optional<Comment> parentCommentOptional = commentRepository.findById(parentCommentId);
+                if (parentCommentOptional.isPresent()) {
+                    Comment parentComment = parentCommentOptional.get();
+                    notificationProducer.sendCommentNotification(parentComment.getUser(), user, null, parentComment, NotificationType.COMMENT_REPLY); // Reply to a comment
+                }
+            }
+            else {
+                notificationProducer.sendCommentNotification(post.getUser(), user, post, null, NotificationType.COMMENT_POST); // Comment to a post
+            }
+        }
+
 
         return commentRepository.save(comment);
     }

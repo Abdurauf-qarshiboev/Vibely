@@ -1,9 +1,12 @@
 package com.webdev.project.backend.enums;
 
 public enum NotificationType {
-    LIKE,
-    COMMENT,
+    LIKE_POST,
+    LIKE_COMMENT,
+    COMMENT_POST,
+    COMMENT_REPLY,
     FOLLOW,
-    MENTION,
-    REPLY
+    FOLLOW_REQUEST,
+    FOLLOW_ACCEPT,
+    FOLLOW_REJECT
 }

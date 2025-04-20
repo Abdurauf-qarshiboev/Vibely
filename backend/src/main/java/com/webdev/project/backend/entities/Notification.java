@@ -43,6 +43,11 @@ public class Notification {
     private Comment comment;
 
     @Setter
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "follow_id")
+    private Follow follow;
+
+    @Setter
     @Column(name = "read", nullable = false)
     private Boolean read = false;
 
@@ -63,5 +68,4 @@ public class Notification {
         this.read = read;
         this.createdAt = createdAt;
     }
-
 }

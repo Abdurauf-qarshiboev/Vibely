@@ -46,9 +46,35 @@ services:
       timeout: 5s
       retries: 5
 
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: kalo
+      RABBITMQ_DEFAULT_PASS: kalo
+    configs:
+      - source: rabbitmq-plugins
+        target: /etc/rabbitmq/enabled_plugins
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+
 networks:
   app-network:
     driver: bridge
 
 volumes:
   postgres-data:
+  rabbitmq-lib:
+    driver: local
+  rabbitmq-log:
+    driver: local
+
+configs:
+  rabbitmq-plugins:
+    content: "[rabbitmq_management]."

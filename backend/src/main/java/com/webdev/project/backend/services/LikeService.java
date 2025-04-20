@@ -5,6 +5,7 @@ import com.webdev.project.backend.entities.Like;
 import com.webdev.project.backend.entities.Post;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
+import com.webdev.project.backend.rabbitmq.NotificationProducer;
 import com.webdev.project.backend.repositories.CommentRepository;
 import com.webdev.project.backend.repositories.LikeRepository;
 import com.webdev.project.backend.repositories.PostRepository;
@@ -21,14 +22,16 @@ public class LikeService {
     private final LikeRepository likeRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final NotificationProducer notificationProducer;
 
     public LikeService(PostRepository postRepository,
-                           LikeRepository postLikeRepository,
-                           UserRepository userRepository,CommentRepository commentRepository) {
+                       LikeRepository postLikeRepository,
+                       UserRepository userRepository, CommentRepository commentRepository, NotificationProducer notificationProducer) {
         this.postRepository = postRepository;
         this.likeRepository = postLikeRepository;
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
+        this.notificationProducer = notificationProducer;
     }
 
     @Transactional
@@ -48,6 +51,11 @@ public class LikeService {
 
         post.setLikeCount(post.getLikeCount() + 1);
         postRepository.save(post);
+
+        // Send notification (async)
+        if (!user.getId().equals(post.getUser().getId())) { // Skip liking own post
+            notificationProducer.sendLikeNotification(post.getUser(), user, post, null);
+        }
 
         return post.getLikeCount();
     }
@@ -92,6 +100,12 @@ public class LikeService {
 
         comment.setLikeCount(comment.getLikeCount() + 1);
         commentRepository.save(comment);
+
+        // Send notification (async)
+        if (!user.getId().equals(comment.getUser().getId())) { // Skip liking own comment
+            notificationProducer.sendLikeNotification(comment.getUser(), user, null, comment);
+        }
+
 
         return comment.getLikeCount();
     }
@@ -143,10 +157,5 @@ public class LikeService {
             return false;
         }
     }
-
-
-
-
-
 }
 

@@ -3,6 +3,7 @@ package com.webdev.project.backend.services;
 import com.webdev.project.backend.entities.Follow;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
+import com.webdev.project.backend.rabbitmq.NotificationProducer;
 import com.webdev.project.backend.repositories.FollowRepository;
 import com.webdev.project.backend.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +18,13 @@ public class FollowService {
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
+    private final NotificationProducer notificationProducer;
 
     @Autowired
-    public FollowService(FollowRepository followRepository, UserRepository userRepository) {
+    public FollowService(FollowRepository followRepository, UserRepository userRepository, NotificationProducer notificationProducer) {
         this.followRepository = followRepository;
         this.userRepository = userRepository;
+        this.notificationProducer = notificationProducer;
     }
 
     @Transactional
@@ -40,7 +43,17 @@ public class FollowService {
         boolean requiresApproval = followed.isPrivate() != null && followed.isPrivate();
 
         Follow follow = new Follow(follower, followed, !requiresApproval);
-        return followRepository.save(follow);
+        Follow savedFollow = followRepository.save(follow);
+
+        // Notification (async)
+        if (savedFollow.getIsApproved()) {
+            notificationProducer.sendFollowNotification(followed, follower);
+        } else {
+            notificationProducer.sendFollowRequestNotification(followed, follower, savedFollow);
+        }
+
+
+        return savedFollow;
     }
 
     @Transactional
@@ -70,7 +83,14 @@ public class FollowService {
         }
 
         followRequest.setIsApproved(true);
-        return followRepository.save(followRequest);
+        Follow savedFollow = followRepository.save(followRequest);
+
+        // Notification (async)
+        if (savedFollow.getIsApproved()){
+            notificationProducer.sendFollowRequestAcceptNotification(followRequest.getFollower(), followRequest.getFollowed());
+        }
+
+        return savedFollow;
     }
 
     @Transactional
@@ -85,6 +105,10 @@ public class FollowService {
         }
 
         followRepository.delete(followRequest);
+
+        // Notification (async)
+        notificationProducer.sendFollowRequestRejectNotification(followRequest.getFollower(), followRequest.getFollowed());
+
     }
 
     public List<Follow> getFollowers(User user) {
