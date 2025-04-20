@@ -34,328 +34,6 @@ const PrevArrow = (props) => (
   </div>
 );
 
-const Comment = ({
-  comment,
-  postId,
-  handleEditComment,
-  handleRemoveComment,
-  timeSince,
-  isDark,
-  currentUser,
-  processedText,
-  toggleCommentExpansion,
-  expandedComments,
-  handleReply,
-}) => {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(comment.likeCount || 0);
-  const [showReplies, setShowReplies] = useState(false);
-  const [replies, setReplies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-
-  // Function to handle username click
-  const handleUsernameClick = (username) => {
-    navigate(`/user/${username}`);
-  };
-
-  // Toggle comment like
-  const toggleLike = async () => {
-    try {
-      setLiked((prev) => !prev);
-      setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
-
-      // API call would go here if you have a like endpoint
-      // await api.post(`/comments/${comment.id}/like`);
-    } catch (error) {
-      console.error("Error liking comment:", error);
-      // Revert state on error
-      setLiked((prev) => !prev);
-      setLikeCount((prev) => (liked ? prev + 1 : prev - 1));
-    }
-  };
-
-  // Load replies
-  const loadReplies = async () => {
-    if (comment.replyCount === 0) return;
-
-    setLoading(true);
-    try {
-      const response = await api.get(`/comments/${comment.id}/replies`);
-      if (response.data && response.data.success) {
-        // Ensure we're getting an array, even if it's empty
-        const repliesData = response.data.data || [];
-
-        // If the API returns an object with a replies property, use that
-        const repliesList = Array.isArray(repliesData)
-          ? repliesData
-          : repliesData.replies && Array.isArray(repliesData.replies)
-          ? repliesData.replies
-          : [];
-
-        setReplies(repliesList);
-      } else {
-        setReplies([]);
-      }
-    } catch (error) {
-      console.error("Error loading replies:", error);
-      setReplies([]);
-    } finally {
-      setLoading(false);
-    }
-
-    setShowReplies((prev) => !prev);
-  };
-
-  return (
-    <div className="mb-3">
-      <div className="flex gap-x-3">
-        <div className="flex-none">
-          <img
-            src={
-              "https://placehold.co/80x80/gray/white?text=User"
-            }
-            alt=""
-            className="w-8 h-8 rounded-full bg-gray-100 cursor-pointer"
-            onClick={() => handleUsernameClick(comment.user?.username)}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "https://placehold.co/80x80/gray/white?text=User";
-            }}
-          />
-        </div>
-
-        <div className="flex-auto">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-baseline flex-wrap">
-                <span
-                  className={`font-semibold text-sm mr-2 hover:underline cursor-pointer ${
-                    isDark ? "text-white" : "text-gray-900"
-                  }`}
-                  onClick={() => handleUsernameClick(comment.user?.username)}
-                >
-                  {comment.user?.username}
-                  {comment.user?.verified && (
-                    <VerifiedBadge className="inline ml-1" />
-                  )}
-                </span>
-
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: processedText(comment.body || ""),
-                  }}
-                  className={`text-sm ${
-                    isDark ? "text-gray-300" : "text-gray-800"
-                  } ${
-                    expandedComments.includes(comment.id)
-                      ? "line-clamp-none"
-                      : "line-clamp-3"
-                  }`}
-                />
-              </div>
-
-              {/* Comment actions */}
-              <div className="flex items-center space-x-4 mt-1">
-                <span className="text-xs text-gray-500">
-                  {timeSince(comment.created_at)}
-                </span>
-
-                {likeCount > 0 && (
-                  <span className="text-xs font-semibold text-gray-500">
-                    {likeCount} {likeCount === 1 ? "like" : "likes"}
-                  </span>
-                )}
-
-                <button
-                  className="text-xs font-semibold text-gray-500"
-                  onClick={() =>
-                    handleReply(comment.user?.username, comment.id)
-                  }
-                >
-                  Reply
-                </button>
-
-                {comment.isTruncated && (
-                  <button
-                    onClick={() => toggleCommentExpansion(comment.id)}
-                    className={`text-xs font-semibold ${
-                      isDark
-                        ? "text-gray-400 hover:text-gray-300"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {expandedComments.includes(comment.id) ? "less" : "more"}
-                  </button>
-                )}
-              </div>
-
-              {/* View/Hide replies */}
-              {comment.replyCount > 0 && (
-                <button
-                  className={`flex items-center mt-1 text-xs ${
-                    isDark ? "text-blue-400" : "text-blue-600"
-                  }`}
-                  onClick={loadReplies}
-                >
-                  <div className="w-5 h-[1px] bg-gray-300 mr-2"></div>
-                  {!showReplies
-                    ? `View replies (${comment.replyCount})`
-                    : "Hide replies"}
-                </button>
-              )}
-
-              {/* Display replies */}
-              {showReplies && (
-                <div className="mt-1 space-y-3">
-                  {loading && (
-                    <div className="flex justify-center py-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
-
-                  {/* Fix the error by ensuring replies is an array before mapping */}
-                  {Array.isArray(replies) ? (
-                    replies.map((reply) => (
-                      <Comment
-                        key={reply.id}
-                        comment={reply}
-                        postId={postId}
-                        handleEditComment={handleEditComment}
-                        handleRemoveComment={handleRemoveComment}
-                        timeSince={timeSince}
-                        isDark={isDark}
-                        currentUser={currentUser}
-                        processedText={processedText}
-                        toggleCommentExpansion={toggleCommentExpansion}
-                        expandedComments={expandedComments}
-                        handleReply={handleReply}
-                      />
-                    ))
-                  ) : (
-                    <div className="text-sm text-gray-500">
-                      No replies available
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-start space-x-2">
-              <button onClick={toggleLike} className="focus:outline-none">
-                {liked ? (
-                  <HeartSolid className="h-3.5 w-3.5 text-red-500" />
-                ) : (
-                  <HeartIcon className="h-3.5 w-3.5 text-gray-500 hover:text-gray-700" />
-                )}
-              </button>
-
-              {comment.user?.username === currentUser?.username && (
-                <Menu as="div" className="relative">
-                  <Menu.Button
-                    className={`${
-                      isDark
-                        ? "text-gray-400 hover:text-white"
-                        : "text-gray-500 hover:text-black"
-                    }`}
-                  >
-                    <span className="sr-only">Actions</span>
-                    <EllipsisHorizontalIcon
-                      className="h-4 w-4"
-                      aria-hidden="true"
-                    />
-                  </Menu.Button>
-                  <Transition
-                    enter="transition ease-out duration-100"
-                    enterFrom="transform opacity-0 scale-95"
-                    enterTo="transform opacity-100 scale-100"
-                    leave="transition ease-in duration-75"
-                    leaveFrom="transform opacity-100 scale-100"
-                    leaveTo="transform opacity-0 scale-95"
-                  >
-                    <Menu.Items
-                      className={`absolute right-0 top-0 z-10 w-24 origin-top-right rounded-md py-0 overflow-hidden shadow-lg ring-1 px-[6px] ring-gray-900/5 focus:outline-none ${
-                        isDark ? "bg-gray-800" : "bg-white"
-                      }`}
-                    >
-                      <Menu.Item>
-                        {({ active }) => (
-                          <button
-                            onClick={() => handleEditComment(comment.id)}
-                            className={`
-                              flex items-center justify-between px-0 py-1 text-sm leading-6 text-yellow-600 w-full text-left
-                              ${
-                                active
-                                  ? isDark
-                                    ? "bg-gray-700"
-                                    : "bg-gray-50"
-                                  : ""
-                              }
-                            `}
-                          >
-                            Edit
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth="1.5"
-                              stroke="currentColor"
-                              className="size-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </Menu.Item>
-                      <Menu.Item>
-                        {({ active }) => (
-                          <button
-                            onClick={() => handleRemoveComment(comment.id)}
-                            className={`
-                              px-0 py-1 text-sm leading-6 text-red-700 flex items-center justify-between w-full text-left
-                              ${
-                                active
-                                  ? isDark
-                                    ? "bg-gray-700"
-                                    : "bg-gray-50"
-                                  : ""
-                              }
-                            `}
-                          >
-                            Delete
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth="1.5"
-                              stroke="#C62828"
-                              className="size-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </Menu.Item>
-                    </Menu.Items>
-                  </Transition>
-                </Menu>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const BlogCommentsPage = () => {
   const navigate = useNavigate();
   const { getBlogById, timeSince } = useBlogsContext();
@@ -385,6 +63,8 @@ const BlogCommentsPage = () => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [parentCommentId, setParentCommentId] = useState(null);
   const [commentText, setCommentText] = useState("");
+  const [userAvatars, setUserAvatars] = useState({});
+  const [visibleReplies, setVisibleReplies] = useState({});
 
   // Refs
   const textareaRef = useRef(null);
@@ -463,12 +143,85 @@ const BlogCommentsPage = () => {
     }
   };
 
-  // Function to handle replying to a comment
-  const handleReply = (username, parentId) => {
+  // Load avatar images for all comments
+  const loadCommentAvatars = async (commentsArray) => {
+    try {
+      const avatarsToLoad = {};
+
+      // Find unique users who have avatars
+      commentsArray.forEach((comment) => {
+        if (comment.user?.avatar && !userAvatars[comment.user.avatar]) {
+          avatarsToLoad[comment.user.avatar] = true;
+        }
+      });
+
+      // Load all unique avatars
+      const avatarPromises = Object.keys(avatarsToLoad).map(
+        async (avatarId) => {
+          try {
+            const url = await getAvatarUrl(avatarId);
+            return { avatarId, url };
+          } catch (error) {
+            console.error(`Error loading avatar ${avatarId}:`, error);
+            return { avatarId, url: null };
+          }
+        }
+      );
+
+      const results = await Promise.all(avatarPromises);
+
+      // Update avatar cache
+      const newAvatars = results.reduce((obj, item) => {
+        if (item.url) {
+          obj[item.avatarId] = item.url;
+        }
+        return obj;
+      }, {});
+
+      setUserAvatars((prev) => ({ ...prev, ...newAvatars }));
+    } catch (error) {
+      console.error("Error loading comment avatars:", error);
+    }
+  };
+
+  // Find the root parent comment ID for a given comment or reply
+  const findRootParentId = (commentId) => {
+    // First check if this is a top-level comment
+    const comment = comments.find((c) => c.id === commentId);
+    if (comment) {
+      return comment.id; // It's a parent comment, return its own ID
+    }
+
+    // Otherwise, search in replies to find its parent
+    for (const parentComment of comments) {
+      if (
+        parentComment.replies &&
+        parentComment.replies.some((reply) => reply.id === commentId)
+      ) {
+        return parentComment.id; // Found the parent, return its ID
+      }
+    }
+
+    return null; // Not found
+  };
+
+  // Function to handle replying to a comment or reply
+  const handleReply = (username, commentId) => {
+    // Find the root parent comment ID (for the API call)
+    const rootParentId = findRootParentId(commentId);
+
     setReplyingTo(username);
-    setParentCommentId(parentId);
+    setParentCommentId(rootParentId); // Always set to the top-level parent ID
     setCommentText(`@${username} `);
     focusTextarea();
+
+    // Make sure replies are visible for this parent
+    if (rootParentId) {
+      setVisibleReplies((prev) => ({
+        ...prev,
+        [rootParentId]: true,
+      }));
+    }
   };
 
   // Cancel reply
@@ -476,6 +229,69 @@ const BlogCommentsPage = () => {
     setReplyingTo(null);
     setParentCommentId(null);
     setCommentText("");
+  };
+
+  // Toggle showing replies for a comment
+  const toggleReplies = async (commentId) => {
+    // If already showing replies, just hide them
+    if (visibleReplies[commentId]) {
+      setVisibleReplies((prev) => ({
+        ...prev,
+        [commentId]: false,
+      }));
+      return;
+    }
+
+    // Otherwise, fetch and show replies
+    try {
+      const response = await api.get(`/comments/${commentId}/replies`);
+
+      if (response.data && response.data.success) {
+        let repliesData = [];
+
+        // Handle different API response structures
+        if (Array.isArray(response.data.data)) {
+          repliesData = response.data.data;
+        } else if (
+          response.data.data &&
+          Array.isArray(response.data.data.replies)
+        ) {
+          repliesData = response.data.data.replies;
+        } else if (
+          response.data.data &&
+          response.data.data.comments &&
+          Array.isArray(response.data.data.comments)
+        ) {
+          repliesData = response.data.data.comments;
+        }
+
+        // Process replies
+        const processedReplies = repliesData.map((reply) => ({
+          ...reply,
+          isTruncated: reply.body?.length > 200,
+        }));
+
+        // Update comments with replies
+        setComments((prevComments) =>
+          prevComments.map((comment) =>
+            comment.id === commentId
+              ? { ...comment, replies: processedReplies }
+              : comment
+          )
+        );
+
+        // Show replies for this comment
+        setVisibleReplies((prev) => ({
+          ...prev,
+          [commentId]: true,
+        }));
+
+        // Load avatars for replies
+        await loadCommentAvatars(processedReplies);
+      }
+    } catch (error) {
+      console.error("Error loading replies:", error);
+    }
   };
 
   useEffect(() => {
@@ -502,6 +318,14 @@ const BlogCommentsPage = () => {
             if (postData.user?.avatar) {
               const userAvatarUrl = await getAvatarUrl(postData.user.avatar);
               setAvatarUrl(userAvatarUrl);
+
+              // Add to user avatars cache
+              if (userAvatarUrl) {
+                setUserAvatars((prev) => ({
+                  ...prev,
+                  [postData.user.avatar]: userAvatarUrl,
+                }));
+              }
             }
 
             // Fetch comments for this post
@@ -511,12 +335,17 @@ const BlogCommentsPage = () => {
 
             if (commentsResponse.data && commentsResponse.data.success) {
               // Map comments with expanded state
-              setComments(
-                commentsResponse.data.data.comments.map((comment) => ({
+              const commentsData = commentsResponse.data.data.comments
+                .filter((comment) => !comment.parent_comment_id) // Only top-level comments
+                .map((comment) => ({
                   ...comment,
                   isTruncated: comment.body?.length > 200,
-                }))
-              );
+                }));
+
+              setComments(commentsData);
+
+              // Load avatars for all comments
+              await loadCommentAvatars(commentsData);
             } else {
               setComments([]);
             }
@@ -604,7 +433,19 @@ const BlogCommentsPage = () => {
   };
 
   const handleEditComment = async (commentId) => {
-    const commentToEdit = comments.find((c) => c.id === commentId);
+    // Find the comment to edit (could be in main comments or in replies)
+    let commentToEdit = comments.find((c) => c.id === commentId);
+
+    if (!commentToEdit) {
+      // Check in replies if not found in main comments
+      for (const comment of comments) {
+        if (comment.replies) {
+          commentToEdit = comment.replies.find((r) => r.id === commentId);
+          if (commentToEdit) break;
+        }
+      }
+    }
+
     if (commentToEdit) {
       setEditingCommentId(commentId);
       setCommentText(commentToEdit.body);
@@ -612,6 +453,7 @@ const BlogCommentsPage = () => {
     }
   };
 
+  // 1. Update handleSubmitComment function to increment comment count
   const handleSubmitComment = async (e) => {
     e.preventDefault();
 
@@ -627,19 +469,37 @@ const BlogCommentsPage = () => {
         });
 
         if (response.data && response.data.success) {
-          // Update comment in state
-          setComments((prev) =>
-            prev.map((comment) =>
-              comment.id === editingCommentId
-                ? {
-                    ...comment,
-                    body: commentText,
-                    updated_at: response.data.data.updated_at,
-                  }
-                : comment
-            )
-          );
+          // Update comment in state (could be in main comments or replies)
+          const updatedComments = comments.map((comment) => {
+            // Check if this is the comment to update
+            if (comment.id === editingCommentId) {
+              return {
+                ...comment,
+                body: commentText,
+                updated_at: response.data.data.updated_at,
+              };
+            }
 
+            // Check if the comment to update is in replies
+            if (comment.replies) {
+              return {
+                ...comment,
+                replies: comment.replies.map((reply) =>
+                  reply.id === editingCommentId
+                    ? {
+                        ...reply,
+                        body: commentText,
+                        updated_at: response.data.data.updated_at,
+                      }
+                    : reply
+                ),
+              };
+            }
+
+            return comment;
+          });
+
+          setComments(updatedComments);
           setEditingCommentId(null);
         }
       } else {
@@ -650,15 +510,88 @@ const BlogCommentsPage = () => {
         });
 
         if (response.data && response.data.success) {
-          // Refresh comments
-          const commentsResponse = await api.get(`/posts/${blog.id}/comments`);
-          if (commentsResponse.data && commentsResponse.data.success) {
-            setComments(
-              commentsResponse.data.data.comments.map((comment) => ({
-                ...comment,
-                isTruncated: comment.body?.length > 200,
-              }))
+          // Increment the post's comment count
+          setBlog((prev) => ({
+            ...prev,
+            commentCount: (prev.commentCount || 0) + 1,
+          }));
+
+          // If it was a reply to a comment, update that comment's replies
+          if (parentCommentId) {
+            // Set visible replies for the parent comment
+            setVisibleReplies((prev) => ({
+              ...prev,
+              [parentCommentId]: true,
+            }));
+
+            // Refetch replies for the parent comment
+            try {
+              const repliesResponse = await api.get(
+                `/comments/${parentCommentId}/replies`
+              );
+
+              if (repliesResponse.data && repliesResponse.data.success) {
+                let repliesData = [];
+
+                // Handle different API response structures
+                if (Array.isArray(repliesResponse.data.data)) {
+                  repliesData = repliesResponse.data.data;
+                } else if (
+                  repliesResponse.data.data &&
+                  Array.isArray(repliesResponse.data.data.replies)
+                ) {
+                  repliesData = repliesResponse.data.data.replies;
+                } else if (
+                  repliesResponse.data.data &&
+                  repliesResponse.data.data.comments &&
+                  Array.isArray(repliesResponse.data.data.comments)
+                ) {
+                  repliesData = repliesResponse.data.data.comments;
+                }
+
+                // Process replies
+                const processedReplies = repliesData.map((reply) => ({
+                  ...reply,
+                  isTruncated: reply.body?.length > 200,
+                }));
+
+                // Update comments with new replies
+                setComments((prevComments) =>
+                  prevComments.map((comment) =>
+                    comment.id === parentCommentId
+                      ? {
+                          ...comment,
+                          replies: processedReplies,
+                          replyCount: processedReplies.length,
+                        }
+                      : comment
+                  )
+                );
+
+                // Load avatars for replies
+                await loadCommentAvatars(processedReplies);
+              }
+            } catch (error) {
+              console.error("Error loading updated replies:", error);
+            }
+          } else {
+            // It was a new top-level comment, refresh all comments
+            const commentsResponse = await api.get(
+              `/posts/${blog.id}/comments`
             );
+            if (commentsResponse.data && commentsResponse.data.success) {
+              const updatedComments = commentsResponse.data.data.comments
+                .filter((comment) => !comment.parent_comment_id) // Only top-level comments
+                .map((comment) => ({
+                  ...comment,
+                  isTruncated: comment.body?.length > 200,
+                }));
+
+              setComments(updatedComments);
+
+              // Load avatars for any new users
+              await loadCommentAvatars(updatedComments);
+            }
           }
         }
       }
@@ -674,12 +607,41 @@ const BlogCommentsPage = () => {
     }
   };
 
+  // 2. Update handleRemoveComment function to decrement comment count
   const handleRemoveComment = async (id) => {
     try {
       setLoading(true);
       await api.delete(`/comments/${id}`);
-      // Remove comment from local state
-      setComments(comments.filter((comment) => comment.id !== id));
+
+      // Decrement the post's comment count
+      setBlog((prev) => ({
+        ...prev,
+        commentCount: Math.max(0, (prev.commentCount || 0) - 1),
+      }));
+
+      // If it's a reply, update the parent comment's replies
+      const parentComment = comments.find(
+        (comment) =>
+          comment.replies && comment.replies.some((reply) => reply.id === id)
+      );
+
+      if (parentComment) {
+        setComments((prevComments) =>
+          prevComments.map((comment) =>
+            comment.id === parentComment.id
+              ? {
+                  ...comment,
+                  replies: comment.replies.filter((reply) => reply.id !== id),
+                  replyCount:
+                    comment.replyCount > 0 ? comment.replyCount - 1 : 0,
+                }
+              : comment
+          )
+        );
+      } else {
+        // Otherwise it's a top-level comment, remove it
+        setComments(comments.filter((comment) => comment.id !== id));
+      }
     } catch (err) {
       console.error("Error removing comment:", err);
     } finally {
@@ -691,6 +653,346 @@ const BlogCommentsPage = () => {
     console.log(event);
     close();
     // Use the modal context's handleHashtagClick
+  };
+
+  // Toggle comment like
+  const toggleCommentLike = async (commentId) => {
+    // Find the comment to determine its current liked status
+    const findComment = (commentId) => {
+      // Check in top-level comments
+      let targetComment = comments.find((comment) => comment.id === commentId);
+      if (targetComment) return targetComment;
+
+      // Check in replies
+      for (const comment of comments) {
+        if (comment.replies) {
+          const reply = comment.replies.find((reply) => reply.id === commentId);
+          if (reply) return reply;
+        }
+      }
+      return null;
+    };
+
+    const comment = findComment(commentId);
+    if (!comment) return;
+
+    const wasLiked = comment.liked;
+
+    try {
+      // Optimistically update UI (same as before)
+      const updateComments = (comments) => {
+        return comments.map((comment) => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              liked: !comment.liked,
+              likeCount: comment.liked
+                ? Math.max(0, comment.likeCount - 1)
+                : comment.likeCount + 1,
+            };
+          }
+
+          if (comment.replies) {
+            return {
+              ...comment,
+              replies: comment.replies.map((reply) => {
+                if (reply.id === commentId) {
+                  return {
+                    ...reply,
+                    liked: !reply.liked,
+                    likeCount: reply.liked
+                      ? Math.max(0, reply.likeCount - 1)
+                      : reply.likeCount + 1,
+                  };
+                }
+                return reply;
+              }),
+            };
+          }
+
+          return comment;
+        });
+      };
+
+      setComments(updateComments);
+
+      // Make API call based on previous liked state
+      if (wasLiked) {
+        await api.delete(`/comments/${commentId}/unlike`);
+      } else {
+        await api.post(`/comments/${commentId}/like`);
+      }
+    } catch (error) {
+      console.error("Error toggling comment like:", error);
+
+      // Revert UI state on error
+      const revertComments = (comments) => {
+        return comments.map((comment) => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              liked: wasLiked,
+              likeCount: wasLiked
+                ? Math.max(1, comment.likeCount + 1)
+                : Math.max(0, comment.likeCount - 1),
+            };
+          }
+
+          if (comment.replies) {
+            return {
+              ...comment,
+              replies: comment.replies.map((reply) => {
+                if (reply.id === commentId) {
+                  return {
+                    ...reply,
+                    liked: wasLiked,
+                    likeCount: wasLiked
+                      ? Math.max(1, reply.likeCount + 1)
+                      : Math.max(0, reply.likeCount - 1),
+                  };
+                }
+                return reply;
+              }),
+            };
+          }
+
+          return comment;
+        });
+      };
+
+      setComments(revertComments);
+    }
+  };
+
+  // Comment Component
+  const CommentItem = ({ comment, isReply = false }) => {
+    const [liked, setLiked] = useState(comment.liked || false);
+    const [likeCount, setLikeCount] = useState(comment.likeCount || 0);
+
+    return (
+      <div className="mb-3">
+        <div className="flex gap-x-3">
+          <div className="flex-none">
+            <img
+              src={
+                comment.user?.avatar && userAvatars[comment.user.avatar]
+                  ? userAvatars[comment.user.avatar]
+                  : "https://placehold.co/80x80/gray/white?text=User"
+              }
+              alt=""
+              className="w-8 h-8 rounded-full bg-gray-100 cursor-pointer"
+              onClick={() => {
+                navigate(`/user/${comment.user?.username}`);
+                close();
+              }}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src =
+                  "https://placehold.co/80x80/gray/white?text=User";
+              }}
+            />
+          </div>
+
+          <div className="flex-auto">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-baseline flex-wrap">
+                  <span
+                    className={`font-semibold flex items-center text-sm mr-2 hover:text-black cursor-pointer ${
+                      isDark ? "text-white" : "text-gray-800"
+                    }`}
+                    onClick={() => {
+                      navigate(`/user/${comment.user?.username}`);
+                      close();
+                    }}
+                  >
+                    {comment.user?.username}
+                    {comment.user?.verified && (
+                      <VerifiedBadge className="inline ml-1" />
+                    )}
+                  </span>
+
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: processedText(comment.body || ""),
+                    }}
+                    className={`text-sm ${
+                      isDark ? "text-gray-300" : "text-gray-800"
+                    } ${
+                      expandedComments.includes(comment.id)
+                        ? "line-clamp-none"
+                        : "line-clamp-3"
+                    }`}
+                  />
+                </div>
+
+                {/* Comment actions */}
+                <div className="flex items-center space-x-4 mt-1">
+                  <span className="text-xs text-left text-gray-500">
+                    {timeSince(comment.created_at)}
+                  </span>
+
+                  {likeCount > 0 && (
+                    <span className="text-xs font-semibold text-gray-500">
+                      {likeCount} {likeCount === 1 ? "like" : "likes"}
+                    </span>
+                  )}
+
+                  <button
+                    className="text-xs font-semibold text-gray-500"
+                    onClick={() =>
+                      handleReply(comment.user?.username, comment.id)
+                    }
+                  >
+                    Reply
+                  </button>
+
+                  {comment.isTruncated && (
+                    <button
+                      onClick={() => toggleCommentExpansion(comment.id)}
+                      className={`text-xs font-semibold ${
+                        isDark
+                          ? "text-gray-400 hover:text-gray-300"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      {expandedComments.includes(comment.id) ? "less" : "more"}
+                    </button>
+                  )}
+                </div>
+
+                {/* View/Hide replies - Only for parent comments */}
+                {!isReply && comment.replyCount > 0 && (
+                  <button
+                    className={`flex items-center mt-1 text-xs ${
+                      isDark ? "text-blue-400" : "text-blue-600"
+                    }`}
+                    onClick={() => toggleReplies(comment.id)}
+                  >
+                    <div className="w-5 h-[1px] bg-gray-300 mr-2"></div>
+                    {!visibleReplies[comment.id]
+                      ? `View replies (${comment.replyCount})`
+                      : "Hide replies"}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <button
+                  onClick={() => toggleCommentLike(comment.id)}
+                  className="focus:outline-none"
+                >
+                  {comment.liked ? (
+                    <HeartSolid className="h-3.5 w-3.5 text-red-500" />
+                  ) : (
+                    <HeartIcon className="h-3.5 w-3.5 text-gray-500 hover:text-gray-700" />
+                  )}
+                </button>
+
+                {comment.user?.username === user?.username && (
+                  <Menu as="div" className="relative">
+                    <Menu.Button
+                      className={`${
+                        isDark
+                          ? "text-gray-400 hover:text-white"
+                          : "text-gray-500 hover:text-black"
+                      }`}
+                    >
+                      <span className="sr-only">Actions</span>
+                      <EllipsisHorizontalIcon
+                        className="h-4 w-4"
+                        aria-hidden="true"
+                      />
+                    </Menu.Button>
+                    <Transition
+                      enter="transition ease-out duration-100"
+                      enterFrom="transform opacity-0 scale-95"
+                      enterTo="transform opacity-100 scale-100"
+                      leave="transition ease-in duration-75"
+                      leaveFrom="transform opacity-100 scale-100"
+                      leaveTo="transform opacity-0 scale-95"
+                    >
+                      <Menu.Items
+                        className={`absolute right-0 top-0 z-10 w-24 origin-top-right rounded-md py-0 overflow-hidden shadow-lg ring-1 px-[6px] ring-gray-900/5 focus:outline-none ${
+                          isDark ? "bg-gray-800" : "bg-white"
+                        }`}
+                      >
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={() => handleEditComment(comment.id)}
+                              className={`
+                                flex items-center justify-between px-0 py-1 text-sm leading-6 text-yellow-600 w-full text-left
+                                ${
+                                  active
+                                    ? isDark
+                                      ? "bg-gray-700"
+                                      : "bg-gray-50"
+                                    : ""
+                                }
+                              `}
+                            >
+                              Edit
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth="1.5"
+                                stroke="currentColor"
+                                className="size-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </Menu.Item>
+                        <Menu.Item>
+                          {({ active }) => (
+                            <button
+                              onClick={() => handleRemoveComment(comment.id)}
+                              className={`
+                                px-0 py-1 text-sm leading-6 text-red-700 flex items-center justify-between w-full text-left
+                                ${
+                                  active
+                                    ? isDark
+                                      ? "bg-gray-700"
+                                      : "bg-gray-50"
+                                    : ""
+                                }
+                              `}
+                            >
+                              Delete
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth="1.5"
+                                stroke="#C62828"
+                                className="size-4"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </Menu.Item>
+                      </Menu.Items>
+                    </Transition>
+                  </Menu>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -941,26 +1243,31 @@ const BlogCommentsPage = () => {
 
                     {/* Comments list */}
                     <div className="space-y-4">
-                      {loading && !comments.length ? (
+                      {loading ? (
                         <div className="flex justify-center items-center py-4">
                           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
                         </div>
                       ) : comments.length > 0 ? (
                         comments.map((comment) => (
-                          <Comment
-                            key={comment.id}
-                            comment={comment}
-                            postId={blog.id}
-                            handleEditComment={handleEditComment}
-                            handleRemoveComment={handleRemoveComment}
-                            timeSince={timeSince}
-                            isDark={isDark}
-                            currentUser={user}
-                            processedText={processedText}
-                            toggleCommentExpansion={toggleCommentExpansion}
-                            expandedComments={expandedComments}
-                            handleReply={handleReply}
-                          />
+                          <div key={comment.id}>
+                            {/* Main comment */}
+                            <CommentItem comment={comment} />
+
+                            {/* Replies with indentation */}
+                            {visibleReplies[comment.id] &&
+                              comment.replies &&
+                              comment.replies.length > 0 && (
+                                <div className="pl-10 ml-1 border-l border-gray-200 dark:border-gray-700 mt-2">
+                                  {comment.replies.map((reply) => (
+                                    <CommentItem
+                                      key={reply.id}
+                                      comment={reply}
+                                      isReply={true}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                          </div>
                         ))
                       ) : (
                         <div className="text-center py-4 text-gray-500">
@@ -973,7 +1280,7 @@ const BlogCommentsPage = () => {
                   {/* Bottom actions section */}
                   <div className="w-full border-t border-gray-200 dark:border-gray-800">
                     {/* Like and comment buttons */}
-                    <div className="w-full flex items-center gap-x-4 px-4 py-3">
+                    <div className="w-full flex items-center gap-x-3 px-4 py-2">
                       <button
                         onClick={() => toggleLike(blog)}
                         className="relative z-10 flex items-center justify-center"
@@ -1010,13 +1317,13 @@ const BlogCommentsPage = () => {
                     </div>
 
                     {/* Stats */}
-                    <div className="w-full px-4 py-1">
-                      <div
-                        className={`text-sm font-bold ${
-                          isDark ? "text-gray-200" : "text-gray-900"
-                        }`}
-                      >
-                        {blog.likeCount || 0} likes
+                    <div className="flex items-center gap-3 w-full px-4 py-1">
+                      <div className={`text-sm text-gray-500 mt-1`}>
+                        {blog.likeCount || 0}{" "}
+                        {blog.likeCount == 1 ? "like" : "likes"}
+                      </div>
+                      <div className={`text-sm text-gray-500 mt-1`}>
+                        {blog.commentCount || 0} comments
                       </div>
                     </div>
 
@@ -1027,11 +1334,11 @@ const BlogCommentsPage = () => {
                       }`}
                     >
                       {replyingTo && (
-                        <div className="flex items-center text-xs bg-gray-100 px-1 py-1 rounded-md">
+                        <div className="flex items-center text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md mr-2">
                           Replying to @{replyingTo}
                           <button
                             onClick={cancelReply}
-                            className="ml-1 text-gray-600"
+                            className="ml-2 text-gray-500"
                           >
                             <XMarkIcon className="w-3 h-3" />
                           </button>
