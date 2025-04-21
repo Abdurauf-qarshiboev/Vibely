@@ -353,15 +353,13 @@ const ProfilePage = () => {
 
               {/* Display username with @ , email and phone*/}
               <div className="flex items-center gap-2">
-                <Tag color="geekblue">
-                  @{profileData.username}
-                </Tag>
-                <Tag color="geekblue-inverse">
-                  {profileData.email}
-                </Tag>
-                <Tag color="blue">
-                  {profileData.phone}
-                </Tag>
+                <Tag color="geekblue">@{profileData.username}</Tag>
+                {profileData.email && (
+                  <Tag color="geekblue-inverse">{profileData.email}</Tag>
+                )}
+                {profileData.phone && (
+                  <Tag color="blue">{profileData.phone}</Tag>
+                )}
               </div>
               {/* Show join date */}
               <div className="text-gray-500 text-sm mt-1">

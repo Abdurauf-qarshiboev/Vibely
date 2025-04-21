@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -12,10 +11,12 @@ import {
   UserIcon,
   ChevronLeftIcon,
   Cog6ToothIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { PhotoIcon, BookmarkIcon, TagIcon } from "@heroicons/react/24/solid";
 import VerifiedBadge from "../../../components/VerifiedBadge";
-import { Tag } from "antd";
+import { Tag, message } from "antd";
+
 const UserProfilePage = () => {
   const navigate = useNavigate();
   const { username } = useParams(); // Get username from URL params
@@ -26,7 +27,7 @@ const UserProfilePage = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [userPosts, setUserPosts] = useState([]);
   const [profileData, setProfileData] = useState(null);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [followStatus, setFollowStatus] = useState("none"); // none, following, requested
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [imageCache, setImageCache] = useState({});
   const [loading, setLoading] = useState(true);
@@ -71,46 +72,87 @@ const UserProfilePage = () => {
     }
   };
 
-  // Toggle follow status
-  const toggleFollow = async () => {
+  // Handle follow action
+  const handleFollowAction = async () => {
     if (!profileData) return;
 
     try {
-      setIsFollowing((prev) => !prev);
+      if (followStatus === "none") {
+        // Start following or send request
+        const { data } = await api.post(`users/${username}/follow`);
 
-      // Call API to follow/unfollow
-      if (!isFollowing) {
-        // Follow user
-        await api.post(`users/${username}/follow`);
+        // If the account is private, the status will be pending
+        if (profileData.private && data.data?.status === "pending") {
+          setFollowStatus("requested");
+          message.success("Follow request sent");
+        } else {
+          setFollowStatus("following");
+          message.success(`You are now following ${username}`);
+
+          // Update follower count
+          setProfileData((prev) => ({
+            ...prev,
+            followersCount: prev.followersCount + 1,
+          }));
+        }
       } else {
-        // Unfollow user
+        // Unfollow or cancel request
         await api.delete(`users/${username}/unfollow`);
-      }
+        setFollowStatus("none");
+        message.success(`You've unfollowed ${username}`);
 
-      // Update follower count in UI
-      setProfileData((prev) => ({
-        ...prev,
-        followersCount: isFollowing
-          ? Math.max(0, prev.followersCount - 1)
-          : prev.followersCount + 1,
-      }));
+        // Only decrease follower count if we were actually following (not just requested)
+        if (followStatus === "following") {
+          setProfileData((prev) => ({
+            ...prev,
+            followersCount: Math.max(0, prev.followersCount - 1),
+          }));
+        }
+      }
     } catch (error) {
-      // Revert UI state on error
-      setIsFollowing((prev) => !prev);
-      console.error("Error toggling follow status:", error);
+      console.error("Follow action failed:", error);
+      message.error("Failed to update follow status");
     }
   };
 
-  // Check if user is being followed
+  // Get follow button text
+  const getFollowButtonText = () => {
+    if (followStatus === "following") {
+      return "Following";
+    } else if (followStatus === "requested") {
+      return "Requested";
+    } else if (profileData?.followingYou) {
+      return "Follow Back";
+    } else {
+      return "Follow";
+    }
+  };
+
+  // Check if user is being followed or has a pending request
   const checkFollowStatus = async (username) => {
     try {
-      const response = await api.get(`users/${username}/following`);
+      const response = await api.get(`users/${username}`);
       if (response.data && response.data.success) {
-        setIsFollowing(!!response.data.data.following);
+        const userData = response.data.data;
+
+        // Set follow status
+        if (userData.followedByYou) {
+          setFollowStatus("following");
+        } else {
+          // Check if there's a pending request (needs to be determined by your API)
+          // This is a placeholder - you might need to modify this based on your API
+          const requestsResponse = await api.get("users/follow-requests/sent");
+          const sentRequests = requestsResponse.data?.data?.requests || [];
+          const isPending = sentRequests.some(
+            (req) => req.username === username
+          );
+
+          setFollowStatus(isPending ? "requested" : "none");
+        }
       }
     } catch (error) {
       console.error("Error checking follow status:", error);
-      setIsFollowing(false);
+      setFollowStatus("none");
     }
   };
 
@@ -147,12 +189,14 @@ const UserProfilePage = () => {
             bio: userData.bio || "",
             verified: userData.verified || false,
             postsCount: 0,
-            followersCount: userData.followersCount || 0,
+            followersCount: userData.followerCount || 0,
             followingCount: userData.followingCount || 0,
             email: userData.email || "",
             phone: userData.phone || "",
             joinDate: userData.created_at || "",
             private: userData.private || false,
+            followingYou: userData.followingYou || false,
+            followedByYou: userData.followedByYou || false,
           });
 
           // Load avatar if available
@@ -162,7 +206,12 @@ const UserProfilePage = () => {
 
           // Check if current user is following this user
           if (currentUser && currentUser.username !== username) {
-            await checkFollowStatus(username);
+            if (userData.followedByYou) {
+              setFollowStatus("following");
+            } else {
+              // Check for pending requests
+              await checkFollowStatus(username);
+            }
           }
         } else {
           setError("User not found");
@@ -203,6 +252,17 @@ const UserProfilePage = () => {
     const fetchUserPosts = async () => {
       // Avoid duplicate requests
       if (!username || postsAttemptedRef.current) return;
+
+      // Don't fetch posts for private accounts if not following
+      if (
+        profileData?.private &&
+        !profileData?.followedByYou &&
+        !isOwnProfile
+      ) {
+        postsAttemptedRef.current = true;
+        setLoading(false);
+        return;
+      }
 
       postsAttemptedRef.current = true;
       setLoading(true);
@@ -284,15 +344,17 @@ const UserProfilePage = () => {
       }
     };
 
-    // Execute the fetch
-    fetchUserPosts();
+    // Execute the fetch if profile data is loaded
+    if (profileData) {
+      fetchUserPosts();
+    }
 
     // Cleanup function
     return () => {
       isMounted = false;
       controller.abort();
     };
-  }, [username]); // Only depend on username to avoid re-fetching
+  }, [username, profileData, isOwnProfile]); // Depend on profileData to ensure we have privacy info
 
   // Handle back button click
   const handleBack = () => {
@@ -397,22 +459,27 @@ const UserProfilePage = () => {
                   {profileData?.username}
                 </div>
                 {profileData?.verified && <VerifiedBadge className="ml-1" />}
+                {profileData?.private && (
+                  <LockClosedIcon className="h-4 w-4 ml-2 text-gray-500" />
+                )}
               </div>
 
               <div className="flex sm:ml-4">
                 {!isOwnProfile ? (
                   <>
                     <button
-                      onClick={toggleFollow}
+                      onClick={handleFollowAction}
                       className={`px-4 py-1 rounded-lg font-medium ${
-                        isFollowing
+                        followStatus === "following" ||
+                        followStatus === "requested"
                           ? isDark
                             ? "bg-gray-800"
                             : "bg-gray-100"
                           : "bg-blue-500 text-white"
                       }`}
+                      disabled={followStatus === "requested"}
                     >
-                      {isFollowing ? "Following" : "Follow"}
+                      {getFollowButtonText()}
                     </button>
                     <button
                       className={`ml-2 px-4 py-1 rounded-lg font-medium ${
@@ -484,9 +551,9 @@ const UserProfilePage = () => {
 
               {/* Display username with @ , email and phone*/}
               <div className="flex items-center gap-2">
-                <Tag color="geekblue">@{profileData.username}</Tag>
-                <Tag color="geekblue-inverse">{profileData.email}</Tag>
-                <Tag color="blue">{profileData.phone}</Tag>
+                <Tag color="geekblue">@{profileData?.username}</Tag>
+                <Tag color="geekblue-inverse">{profileData?.email}</Tag>
+                <Tag color="blue">{profileData?.phone}</Tag>
               </div>
 
               {/* Show join date */}
@@ -498,205 +565,251 @@ const UserProfilePage = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div
-        className={`mt-6 border-t ${
-          isDark ? "border-gray-800" : "border-gray-300"
-        }`}
-      >
-        <div className="flex justify-around max-w-4xl mx-auto">
-          <button
-            onClick={() => setActiveTab("posts")}
-            className={`py-3 flex-1 flex justify-center items-center gap-1 ${
-              activeTab === "posts"
-                ? isDark
-                  ? "border-b border-white"
-                  : "border-b border-black"
-                : ""
-            }`}
-          >
-            <PhotoIcon
-              className={`w-5 h-5 ${
-                activeTab === "posts" ? "" : "text-gray-500"
-              }`}
-            />
-            <span className="uppercase text-xs tracking-wider font-medium">
-              Posts
-            </span>
-          </button>
-
-          {/* Only show saved tab for own profile */}
-          {isOwnProfile && (
+      {/* Private Account Notice */}
+      {profileData?.private && !profileData?.followedByYou && !isOwnProfile && (
+        <div className="mt-8 text-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <LockClosedIcon className="h-10 w-10 text-gray-400" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">This Account is Private</h2>
+          <p className="text-gray-500 max-w-md mx-auto mb-6">
+            Follow this account to see their photos and videos.
+          </p>
+          {followStatus !== "requested" && (
             <button
-              onClick={() => setActiveTab("saved")}
-              className={`py-3 flex-1 flex justify-center items-center gap-1 ${
-                activeTab === "saved"
-                  ? isDark
-                    ? "border-b border-white"
-                    : "border-b border-black"
-                  : ""
-              }`}
+              onClick={handleFollowAction}
+              className="px-6 py-2 rounded-lg font-medium bg-blue-500 text-white"
             >
-              <BookmarkIcon
-                className={`w-5 h-5 ${
-                  activeTab === "saved" ? "" : "text-gray-500"
-                }`}
-              />
-              <span className="uppercase text-xs tracking-wider font-medium">
-                Saved
-              </span>
+              Follow
             </button>
           )}
+        </div>
+      )}
 
-          <button
-            onClick={() => setActiveTab("tagged")}
-            className={`py-3 flex-1 flex justify-center items-center gap-1 ${
-              activeTab === "tagged"
-                ? isDark
-                  ? "border-b border-white"
-                  : "border-b border-black"
-                : ""
+      {/* Only show tabs if account is not private or user is following or it's own profile */}
+      {(!profileData?.private ||
+        profileData?.followedByYou ||
+        isOwnProfile) && (
+        <>
+          {/* Tabs */}
+          <div
+            className={`mt-6 border-t ${
+              isDark ? "border-gray-800" : "border-gray-300"
             }`}
           >
-            <TagIcon
-              className={`w-5 h-5 ${
-                activeTab === "tagged" ? "" : "text-gray-500"
-              }`}
-            />
-            <span className="uppercase text-xs tracking-wider font-medium">
-              Tagged
-            </span>
-          </button>
-        </div>
-      </div>
+            <div className="flex justify-around max-w-4xl mx-auto">
+              <button
+                onClick={() => setActiveTab("posts")}
+                className={`py-3 flex-1 flex justify-center items-center gap-1 ${
+                  activeTab === "posts"
+                    ? isDark
+                      ? "border-b border-white"
+                      : "border-b border-black"
+                    : ""
+                }`}
+              >
+                <PhotoIcon
+                  className={`w-5 h-5 ${
+                    activeTab === "posts" ? "" : "text-gray-500"
+                  }`}
+                />
+                <span className="uppercase text-xs tracking-wider font-medium">
+                  Posts
+                </span>
+              </button>
 
-      {/* Content based on active tab */}
-      <div className="max-w-4xl mx-auto px-4 pb-20">
-        {/* POSTS TAB */}
-        {activeTab === "posts" && (
-          <div>
-            {loading && !userPosts.length ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : userPosts.length > 0 ? (
-              <div className="grid grid-cols-3 gap-1 mt-1">
-                {userPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="aspect-square relative cursor-pointer group"
-                    onClick={() => openCommentsPage(post.id, true)}
-                  >
-                    {/* Post image */}
-                    <img
-                      src={
-                        post.featuredImageUrl ||
-                        "https://placehold.co/300x300/gray/white?text=No+Image"
-                      }
-                      alt={post.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src =
-                          "https://placehold.co/300x300/gray/white?text=Error";
-                      }}
-                    />
-
-                    {/* Hover overlay with likes and comments count */}
-                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center space-x-8 text-white">
-                      <div className="flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="w-7 h-7 mr-2"
-                        >
-                          <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
-                        </svg>
-                        <span className="text-xl font-medium">
-                          {post.likeCount || 0}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="w-7 h-7 mr-2"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M5.337 21.718a6.707 6.707 0 01-.533-.074.75.75 0 01-.44-1.223 3.73 3.73 0 00.814-1.686c.023-.115-.022-.317-.254-.543C3.274 16.587 2.25 14.41 2.25 12c0-5.03 4.428-9 9.75-9s9.75 3.97 9.75 9c0 5.03-4.428 9-9.75 9-.833 0-1.643-.097-2.417-.279a6.721 6.721 0 01-4.246.997z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <span className="text-xl font-medium">
-                          {post.commentCount || 0}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Indicator for multiple images */}
-                    {post.images && post.images.length > 1 && (
-                      <div className="absolute top-2 right-2">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="white"
-                          className="w-5 h-5 drop-shadow-md"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div
-                  className={`rounded-full p-6 ${
-                    isDark ? "bg-gray-900" : "bg-gray-100"
+              {/* Only show saved tab for own profile */}
+              {isOwnProfile && (
+                <button
+                  onClick={() => setActiveTab("saved")}
+                  className={`py-3 flex-1 flex justify-center items-center gap-1 ${
+                    activeTab === "saved"
+                      ? isDark
+                        ? "border-b border-white"
+                        : "border-b border-black"
+                      : ""
                   }`}
                 >
-                  <CameraIcon className="w-12 h-12 text-gray-500" />
-                </div>
-                <h3 className="mt-4 text-2xl font-bold">No Posts Yet</h3>
-                <p className="mt-2 text-gray-500 max-w-md">
-                  {isOwnProfile
-                    ? "When you share photos, they will appear here."
-                    : `When ${profileData?.username} shares photos, they will appear here.`}
-                </p>
-                {isOwnProfile && (
-                  <button
-                    onClick={() => navigate("/create-post")}
-                    className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                  >
-                    Create Your First Post
-                  </button>
+                  <BookmarkIcon
+                    className={`w-5 h-5 ${
+                      activeTab === "saved" ? "" : "text-gray-500"
+                    }`}
+                  />
+                  <span className="uppercase text-xs tracking-wider font-medium">
+                    Saved
+                  </span>
+                </button>
+              )}
+
+              <button
+                onClick={() => setActiveTab("tagged")}
+                className={`py-3 flex-1 flex justify-center items-center gap-1 ${
+                  activeTab === "tagged"
+                    ? isDark
+                      ? "border-b border-white"
+                      : "border-b border-black"
+                    : ""
+                }`}
+              >
+                <TagIcon
+                  className={`w-5 h-5 ${
+                    activeTab === "tagged" ? "" : "text-gray-500"
+                  }`}
+                />
+                <span className="uppercase text-xs tracking-wider font-medium">
+                  Tagged
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Content based on active tab */}
+          <div className="max-w-4xl mx-auto px-4 pb-20">
+            {/* POSTS TAB */}
+            {activeTab === "posts" && (
+              <div>
+                {loading && !userPosts.length ? (
+                  <div className="flex justify-center items-center py-20">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : userPosts.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-1 mt-1">
+                    {userPosts.map((post) => (
+                      <div
+                        key={post.id}
+                        className="aspect-square relative cursor-pointer group"
+                        onClick={() => openCommentsPage(post.id, true)}
+                      >
+                        {/* Post image */}
+                        <img
+                          src={
+                            post.featuredImageUrl ||
+                            "https://placehold.co/300x300/gray/white?text=No+Image"
+                          }
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src =
+                              "https://placehold.co/300x300/gray/white?text=Error";
+                          }}
+                        />
+
+                        {/* Hover overlay with likes and comments count */}
+                        <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center space-x-8 text-white">
+                          <div className="flex items-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="w-7 h-7 mr-2"
+                            >
+                              <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                            </svg>
+                            <span className="text-xl font-medium">
+                              {post.likeCount || 0}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="w-7 h-7 mr-2"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M5.337 21.718a6.707 6.707 0 01-.533-.074.75.75 0 01-.44-1.223 3.73 3.73 0 00.814-1.686c.023-.115-.022-.317-.254-.543C3.274 16.587 2.25 14.41 2.25 12c0-5.03 4.428-9 9.75-9s9.75 3.97 9.75 9c0 5.03-4.428 9-9.75 9-.833 0-1.643-.097-2.417-.279a6.721 6.721 0 01-4.246.997z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <span className="text-xl font-medium">
+                              {post.commentCount || 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Indicator for multiple images */}
+                        {post.images && post.images.length > 1 && (
+                          <div className="absolute top-2 right-2">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="white"
+                              className="w-5 h-5 drop-shadow-md"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div
+                      className={`rounded-full p-6 ${
+                        isDark ? "bg-gray-900" : "bg-gray-100"
+                      }`}
+                    >
+                      <CameraIcon className="w-12 h-12 text-gray-500" />
+                    </div>
+                    <h3 className="mt-4 text-2xl font-bold">No Posts Yet</h3>
+                    <p className="mt-2 text-gray-500 max-w-md">
+                      {isOwnProfile
+                        ? "When you share photos, they will appear here."
+                        : `When ${profileData?.username} shares photos, they will appear here.`}
+                    </p>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => navigate("/create-post")}
+                        className="mt-6 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                      >
+                        Create Your First Post
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* SAVED TAB */}
-        {activeTab === "saved" && (
-          <>
-            {isOwnProfile ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                {loading ? (
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            {/* SAVED TAB */}
+            {activeTab === "saved" && (
+              <>
+                {isOwnProfile ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 mb-6">
+                          Only you can see what you've saved
+                        </p>
+                        <div
+                          className={`rounded-full p-6 ${
+                            isDark ? "bg-gray-900" : "bg-gray-100"
+                          }`}
+                        >
+                          <BookmarkIcon className="w-12 h-12 text-gray-500" />
+                        </div>
+                        <h3 className="mt-4 text-2xl font-bold">
+                          No Saved Posts
+                        </h3>
+                        <p className="mt-2 text-gray-500 max-w-md">
+                          Save photos and videos that you want to see again. No
+                          one is notified, and only you can see what you've
+                          saved.
+                        </p>
+                      </>
+                    )}
+                  </div>
                 ) : (
-                  <>
-                    <p className="text-gray-500 mb-6">
-                      Only you can see what you've saved
-                    </p>
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div
                       className={`rounded-full p-6 ${
                         isDark ? "bg-gray-900" : "bg-gray-100"
@@ -704,61 +817,48 @@ const UserProfilePage = () => {
                     >
                       <BookmarkIcon className="w-12 h-12 text-gray-500" />
                     </div>
-                    <h3 className="mt-4 text-2xl font-bold">No Saved Posts</h3>
+                    <h3 className="mt-4 text-2xl font-bold">
+                      Private Collection
+                    </h3>
+                    <p className="mt-2 text-gray-500">
+                      Saved posts can only be viewed by the account owner.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* TAGGED TAB */}
+            {activeTab === "tagged" && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                {loading ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                ) : (
+                  <>
+                    <div
+                      className={`rounded-full p-6 ${
+                        isDark ? "bg-gray-900" : "bg-gray-100"
+                      }`}
+                    >
+                      <TagIcon className="w-12 h-12 text-gray-500" />
+                    </div>
+                    <h3 className="mt-4 text-2xl font-bold">
+                      {isOwnProfile
+                        ? "Photos of You"
+                        : `Photos of ${profileData?.username}`}
+                    </h3>
                     <p className="mt-2 text-gray-500 max-w-md">
-                      Save photos and videos that you want to see again. No one
-                      is notified, and only you can see what you've saved.
+                      {isOwnProfile
+                        ? "When people tag you in photos, they'll appear here."
+                        : `When people tag ${profileData?.username} in photos, they'll appear here.`}
                     </p>
                   </>
                 )}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div
-                  className={`rounded-full p-6 ${
-                    isDark ? "bg-gray-900" : "bg-gray-100"
-                  }`}
-                >
-                  <BookmarkIcon className="w-12 h-12 text-gray-500" />
-                </div>
-                <h3 className="mt-4 text-2xl font-bold">Private Collection</h3>
-                <p className="mt-2 text-gray-500">
-                  Saved posts can only be viewed by the account owner.
-                </p>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* TAGGED TAB */}
-        {activeTab === "tagged" && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            {loading ? (
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            ) : (
-              <>
-                <div
-                  className={`rounded-full p-6 ${
-                    isDark ? "bg-gray-900" : "bg-gray-100"
-                  }`}
-                >
-                  <TagIcon className="w-12 h-12 text-gray-500" />
-                </div>
-                <h3 className="mt-4 text-2xl font-bold">
-                  {isOwnProfile
-                    ? "Photos of You"
-                    : `Photos of ${profileData?.username}`}
-                </h3>
-                <p className="mt-2 text-gray-500 max-w-md">
-                  {isOwnProfile
-                    ? "When people tag you in photos, they'll appear here."
-                    : `When people tag ${profileData?.username} in photos, they'll appear here.`}
-                </p>
-              </>
             )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* BlogCommentsPage component for post comments */}
       <BlogCommentsPage />

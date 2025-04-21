@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from "react";
-import { api } from "../helpers/api.js";
+import { api } from "../helpers/api";
 import { useNavigate } from "react-router-dom";
 import { message } from "antd"; // Using Ant Design for messages
 
@@ -10,58 +10,11 @@ export const AuthProvider = ({ children }) => {
   const [isAuth, setIsAuth] = useState(false);
   const navigate = useNavigate();
 
-  // const signup = async (signupUser) => {
-  //   const apiUser = {
-  //     username: signupUser.username,
-  //     password: signupUser.password,
-  //     firstName: signupUser.firstName,
-  //     lastName: signupUser.lastName,
-  //     email: signupUser.email,
-  //     phone: signupUser.phone,
-  //   };
-
-  //   console.log("Signing up with:", apiUser);
-
-  //   try {
-  //     const { data } = await api.post("auth/register", apiUser);
-  //     console.log("Signup response:", data);
-
-  //     if (data?.error) {
-  //       message.warning(`${data.error?.message || "Registration failed"}`);
-  //     } else {
-  //       message.success(
-  //         "Successfully registered. You can now login with your credentials."
-  //       );
-  //       navigate("/auth/login");
-  //     }
-  //   } catch (error) {
-  //     console.error("Signup error:", error);
-  //     message.error(
-  //       error?.response?.data?.error?.message ||
-  //         "Registration failed! Please try again."
-  //     );
-  //   }
-  // };
-
-  const signup = async (signupUser) => {
-    // Format the data exactly as shown in your Postman screenshot
-    const apiUser = {
-      username: signupUser.username,
-      password: signupUser.password,
-      firstName: signupUser.firstName,
-      lastName: signupUser.lastName,
-      email: signupUser.email,
-      phone: signupUser.phone,
-      role: "USER"
-    };
-
-    console.log("Signing up with:", apiUser);
-
+  const signup = async (userData) => {
     try {
-
-      const { data } = await api.post("auth/register", apiUser);
+      console.log("Signing up with:", userData);
+      const { data } = await api.post("auth/register", userData);
       console.log("Signup response:", data);
-
       if (data?.error) {
         message.warning(data.error?.message || "Registration failed");
       } else {
@@ -72,12 +25,17 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Signup error:", error);
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Registration failed! Please try again."
+      );
     }
   };
 
   const login = async (loginUser) => {
     console.log("Logging in with:", loginUser);
-    
+
     try {
       const { data } = await api.post(`auth/login`, loginUser);
       if (data) console.log("Login response:", data);
@@ -118,7 +76,6 @@ export const AuthProvider = ({ children }) => {
       logout();
     }
   };
-
   return (
     <AuthContext.Provider
       value={{
@@ -136,3 +93,5 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+// Last updated: 2025-04-21 16:38:16 by Quvonchbek-Qurbonovs
