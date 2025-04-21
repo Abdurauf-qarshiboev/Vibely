@@ -21,10 +21,14 @@ services:
       - RABBIT_USER=kalo
       - RABBIT_PASS=kalo
       - RABBIT_PORT=5672
+      - ELASTIC_HOST=elasticsearch
+      - ELASTIC_PORT=9200
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
 
     restart: unless-stopped
@@ -79,6 +83,26 @@ services:
     networks:
       - app-network
 
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: web-project2-elastic
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
 networks:
   app-network:
     driver: bridge
@@ -89,6 +113,7 @@ volumes:
     driver: local
   rabbitmq-log:
     driver: local
+  esdata01:
 
 configs:
   rabbitmq-plugins:

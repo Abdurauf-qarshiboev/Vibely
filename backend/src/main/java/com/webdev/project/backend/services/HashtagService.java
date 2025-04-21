@@ -16,10 +16,12 @@ public class HashtagService {
 
     private final HashtagRepository hashtagRepository;
     private final PostRepository postRepository;
+    private final ElasticsearchIndexService elasticsearchIndexService;
 
-    public HashtagService(HashtagRepository hashtagRepository, PostRepository postRepository) {
+    public HashtagService(HashtagRepository hashtagRepository, PostRepository postRepository, ElasticsearchIndexService elasticsearchIndexService) {
         this.hashtagRepository = hashtagRepository;
         this.postRepository = postRepository;
+        this.elasticsearchIndexService = elasticsearchIndexService;
     }
 
     // Get trending hashtags (limit is optional)
@@ -45,8 +47,19 @@ public class HashtagService {
         Set<Hashtag> hashtags = new HashSet<>();
         for (String name : names) {
             String trimmedName = name.trim();
-            Hashtag hashtag = hashtagRepository.findByNameIgnoreCase(trimmedName)
-                    .orElseGet(() -> hashtagRepository.save(new Hashtag(trimmedName)));
+
+            Hashtag hashtag;
+
+            Optional<Hashtag> hashtagOptional = hashtagRepository.findByNameIgnoreCase(trimmedName);
+
+            if (hashtagOptional.isPresent()) {
+                hashtag = hashtagOptional.get();
+            } else {
+                hashtag = hashtagRepository.save(new Hashtag(trimmedName));
+
+                // Index new hashtag in Elasticsearch
+                elasticsearchIndexService.indexHashtag(hashtag);
+            }
 
             hashtag.setPostCount(hashtag.getPostCount() + 1);
             hashtagRepository.save(hashtag);
@@ -59,5 +72,9 @@ public class HashtagService {
     // If needed elsewhere (with posts eager-loaded)
     public Optional<Hashtag> getHashtagWithPosts(String name) {
         return hashtagRepository.findByNameWithPosts(name.trim());
+    }
+
+    public Optional<Hashtag> findById(Long id) {
+        return hashtagRepository.findById(id);
     }
 }

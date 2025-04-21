@@ -1,8 +1,8 @@
 package com.webdev.project.backend.services;
 
+import com.webdev.project.backend.elasticsearch.repository.PostSearchRepository;
 import com.webdev.project.backend.entities.Hashtag;
 import com.webdev.project.backend.entities.Post;
-import com.webdev.project.backend.entities.PostImage;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.repositories.HashtagRepository;
 import com.webdev.project.backend.repositories.PostRepository;
@@ -25,14 +25,16 @@ public class PostService {
     private final HashtagRepository hashtagRepository;
     private final ImageService imageService;
     private final PostImageService postImageService;
+    private final ElasticsearchIndexService elasticsearchIndexService;
 
-    public PostService(PostRepository postRepository, UserRepository userRepository, HashtagService hashtagService, HashtagRepository hashtagRepository, ImageService imageService, PostImageService postImageService) {
+    public PostService(PostRepository postRepository, UserRepository userRepository, HashtagService hashtagService, HashtagRepository hashtagRepository, ImageService imageService, PostImageService postImageService, PostSearchRepository postSearchRepository, ElasticsearchIndexService elasticsearchIndexService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.hashtagService = hashtagService;
         this.hashtagRepository = hashtagRepository;
         this.imageService = imageService;
         this.postImageService = postImageService;
+        this.elasticsearchIndexService = elasticsearchIndexService;
     }
 
     public Post createPost(CreatePostRequest request, List<MultipartFile> imageFile, User currentUser) {
@@ -80,8 +82,12 @@ public class PostService {
 
         if (!imagePaths.isEmpty()) {
             postImageService.setImagesForPost(savedPost, imagePaths);
-            savedPost.setImages(postImageService.getImagesForPost(savedPost));
+            savedPost.getImages().clear();                // Remove all
+            savedPost.getImages().addAll(postImageService.getImagesForPost(savedPost));
         }
+
+        // Index Post with elastic search
+        elasticsearchIndexService.indexPost(savedPost);
 
         return savedPost;
     }
@@ -114,7 +120,12 @@ public class PostService {
         existingPost.setPrivate(updatedData.getPrivate());
         // Hashtag update can be implemented later
 
-        return Optional.of(postRepository.save(existingPost));
+        Post savedPost = postRepository.save(existingPost);
+
+        // Update post in Elasticsearch
+        elasticsearchIndexService.updatePostIndex(savedPost);
+
+        return Optional.of(savedPost);
     }
 
     public List<Post> getPostsByUser(User user) {
@@ -132,7 +143,12 @@ public class PostService {
         Post post = optionalPost.get();
         if (!post.getUser().getId().equals(currentUser.getId())) return false;
 
+        // Delete from Elasticsearch first
+        elasticsearchIndexService.deletePostIndex(post.getId());
+
+        // Delete from database
         postRepository.delete(post);
+
         return true;
     }
 
@@ -147,5 +163,9 @@ public class PostService {
             );
         }
         return postRepository.searchPublicPosts(query == null ? "" : query.toLowerCase());
+    }
+
+    public Optional<Post> findById(Long id) {
+        return postRepository.findById(id);
     }
 }
