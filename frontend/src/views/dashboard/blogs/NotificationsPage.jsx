@@ -170,7 +170,7 @@ export default function NotificationsPage() {
     if (notifications.length > 0) {
       loadAvatars();
     }
-  }, [notifications, imageCache, avatarUrls]);
+  }, [notifications, imageCache]);
 
   // Initial data load
   useEffect(() => {

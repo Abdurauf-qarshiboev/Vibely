@@ -261,7 +261,7 @@ const DashboardLayout = () => {
         title="Search"
         destroyOnClose
         placement="right"
-        width={400}
+        width={500}
         open={drawerOpen}
         onClose={closeDrawer}
         className={isDark ? "drawer-dark" : "drawer-light"}
