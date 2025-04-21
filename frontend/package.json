@@ -16,6 +16,7 @@
     "@splidejs/react-splide": "^0.7.12",
     "@tailwindcss/forms": "^0.5.10",
     "antd": "^5.24.7",
+    "antd-img-crop": "^4.24.0",
     "axios": "^1.8.4",
     "clsx": "^2.1.1",
     "react": "^19.0.0",

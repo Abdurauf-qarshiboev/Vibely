@@ -1,0 +1,168 @@
+/* Dark mode fixes for Ant Design components */
+.dark-mode-upload.ant-upload.ant-upload-select-picture-card {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark-mode-upload.ant-upload.ant-upload-select-picture-card:hover {
+  border-color: #177ddc !important;
+}
+
+/* Input styles for dark mode - MORE COMPREHENSIVE FIXES */
+.ant-input-affix-wrapper-status-error {
+  border-color: #ff4d4f !important;
+}
+
+/* Base styles for all input types in dark mode */
+.dark .ant-input,
+.dark .ant-input-affix-wrapper,
+.dark .ant-input-password,
+.dark .ant-input-textarea,
+.dark .ant-input-number,
+.dark .ant-picker,
+.dark .ant-select-selector {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: white !important;
+}
+
+/* Hover states */
+.dark .ant-input:hover,
+.dark .ant-input-affix-wrapper:hover,
+.dark .ant-input-password:hover,
+.dark .ant-input-textarea:hover {
+  border-color: #177ddc !important;
+  background-color: #1f2937 !important;
+}
+
+/* Focus states */
+.dark .ant-input:focus,
+.dark .ant-input.ant-input-focused,
+.dark .ant-input-affix-wrapper.ant-input-affix-wrapper-focused,
+.dark .ant-input-affix-wrapper:focus,
+.dark .ant-input-password.ant-input-password-focused,
+.dark .ant-input-password:focus,
+.dark .ant-input-number-focused,
+.dark .ant-input-textarea.ant-input-textarea-focused {
+  border-color: #177ddc !important;
+  box-shadow: 0 0 0 2px rgba(23, 125, 220, 0.1) !important;
+  background-color: #1f2937 !important;
+}
+
+/* Inside elements of compound inputs */
+.dark .ant-input-affix-wrapper > input.ant-input,
+.dark .ant-input-affix-wrapper-focused > input.ant-input,
+.dark .ant-input-affix-wrapper:hover > input.ant-input,
+.dark .ant-input-affix-wrapper:focus > input.ant-input {
+  background-color: transparent !important;
+}
+
+/* Password input specific */
+.dark .ant-input-password input {
+  background-color: transparent !important;
+  color: white !important;
+}
+
+.dark .ant-input-affix-wrapper-status-error {
+  background-color: #1f2937 !important;
+}
+
+/* Active states */
+.dark .ant-input:active,
+.dark .ant-input-affix-wrapper:active {
+  background-color: #1f2937 !important;
+}
+
+/* Placeholder text color - UPDATED WITH LIGHTER COLOR */
+.dark .ant-input::placeholder,
+.dark .ant-input-password input::placeholder,
+.dark .ant-input-number input::placeholder,
+.dark .ant-input-textarea::placeholder {
+  color: #9ca3af !important; /* Changed to text-gray-400 for better visibility */
+}
+
+/* Fix for specific input states that might be missing */
+.dark .ant-input-affix-wrapper .ant-input {
+  background-color: transparent !important;
+  color: white !important;
+}
+
+.dark .ant-input-affix-wrapper .ant-input::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Fix for Ant Design Upload in dark mode */
+.dark .ant-upload.ant-upload-select-picture-card {
+  background-color: transparent !important;
+  border-color: #374151 !important;
+}
+
+.dark .ant-upload.ant-upload-select-picture-card:hover {
+  border-color: #177ddc !important;
+}
+
+/* Fix for form labels in dark mode */
+.dark .ant-form-item-label > label {
+  color: white !important;
+}
+
+/* Fix for Textarea character count */
+.dark .ant-input-textarea-show-count::after {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* Button styles for dark mode */
+.dark .ant-btn-primary {
+  background-color: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+}
+
+/* Fix for input groups */
+.dark .ant-input-group-addon {
+  background-color: #374151 !important;
+  border-color: #374151 !important;
+  color: white !important;
+}
+
+/* Specific fix for the ant-input-password-icon */
+.dark .ant-input-password-icon {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.dark .ant-input-password-icon:hover {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Fix for the eye icon in password input */
+.dark .anticon.ant-input-password-icon {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* Additional fixes for input states */
+.dark .ant-input-affix-wrapper.ant-input-affix-wrapper-focused .ant-input {
+  background-color: transparent !important;
+}
+
+.dark .ant-input-affix-wrapper:hover .ant-input,
+.dark .ant-input-affix-wrapper:focus .ant-input,
+.dark .ant-input-affix-wrapper-focused .ant-input {
+  background-color: transparent !important;
+}
+
+/* Fix for antd form validation styles */
+.dark .ant-form-item-has-error .ant-input,
+.dark .ant-form-item-has-error .ant-input-affix-wrapper,
+.dark .ant-form-item-has-error .ant-input:hover,
+.dark .ant-form-item-has-error .ant-input-affix-wrapper:hover {
+  background-color: #1f2937 !important;
+  border-color: #ff4d4f !important;
+}
+
+.dark .ant-form-item-has-error .ant-input-affix-wrapper-focused,
+.dark .ant-form-item-has-error .ant-input-affix-wrapper:focus,
+.dark .ant-form-item-has-error .ant-input-focused,
+.dark .ant-form-item-has-error .ant-input:focus {
+  border-color: #ff4d4f !important;
+  background-color: #1f2937 !important;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+}
