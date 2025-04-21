@@ -23,10 +23,10 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
 
     Optional<Follow> findByFollowerAndFollowedAndIsApproved(User follower, User followed, Boolean isApproved);
 
-    @Query("SELECT COUNT(f) FROM Follow f WHERE f.followed = :followed")
+    @Query("SELECT COUNT(f) FROM Follow f WHERE f.followed = :followed and f.isApproved = true")
     int getFollowsCountByFollowed(@Param("followed") User followed);
 
-    @Query("SELECT COUNT(f) FROM Follow f WHERE f.follower = :follower")
+    @Query("SELECT COUNT(f) FROM Follow f WHERE f.follower = :follower and f.isApproved = true" )
     int getFollowsCountByFollower(@Param("follower") User follower);
 
     boolean existsByFollowerAndFollowedAndIsApprovedTrue(User follower, User followed);
