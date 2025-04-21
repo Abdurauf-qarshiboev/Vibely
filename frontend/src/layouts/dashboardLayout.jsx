@@ -193,7 +193,11 @@ const DashboardLayout = () => {
                       <BellFilled style={{ fontSize: 22 }} />
                     </Badge>
                   ) : (
-                    <Badge className="z-99" count={unreadCount} overflowCount={10}>
+                    <Badge
+                      className="z-99"
+                      count={unreadCount}
+                      overflowCount={10}
+                    >
                       <BellOutlined style={{ fontSize: 22 }} />
                     </Badge>
                   ),
@@ -257,7 +261,7 @@ const DashboardLayout = () => {
         title="Search"
         destroyOnClose
         placement="right"
-        width={600}
+        width={400}
         open={drawerOpen}
         onClose={closeDrawer}
         className={isDark ? "drawer-dark" : "drawer-light"}
@@ -274,7 +278,10 @@ const DashboardLayout = () => {
             <Spin size="large" />
           </div>
         ) : (
-          <SearchDrawerContent key={`search-drawer-${theme}`} />
+          <SearchDrawerContent
+            key={`search-drawer-${theme}`}
+            onClose={closeDrawer}
+          />
         )}
       </Drawer>
     </div>

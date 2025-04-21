@@ -1,15 +1,15 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Input, Tabs, Empty, Spin, message } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import { useTheme } from "@/context/ThemeContext";
 import { api } from "../../../helpers/api";
 import { useModalContext } from "@/context/main/ModalContext";
 import { getImageUrl } from "../../../utils/ImageHelpers";
+import { useNavigate } from "react-router-dom";
 
 const { TabPane } = Tabs;
 
-const SearchDrawerContent = () => {
+const SearchDrawerContent = ({ onClose }) => {
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState("Users");
   const [searchResults, setSearchResults] = useState([]);
@@ -21,11 +21,13 @@ const SearchDrawerContent = () => {
   const [imageCache, setImageCache] = useState({});
   const [avatarUrls, setAvatarUrls] = useState({});
   const [postImageUrls, setPostImageUrls] = useState({});
+  const searchTimerRef = useRef(null);
 
   // Use the theme and modal context
   const { theme } = useTheme();
   const { setToggle } = useModalContext();
   const isDark = theme === "dark";
+  const navigate = useNavigate();
 
   // Force re-render when theme changes
   const [, forceUpdate] = useState({});
@@ -36,9 +38,37 @@ const SearchDrawerContent = () => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // Open post comments
+  // Open post comments and close drawer
   const openPostComments = (postId) => {
-    setToggle(postId, true);
+    // Close drawer first
+    if (onClose) onClose();
+
+    // Then open comments with slight delay to allow drawer to close
+    setTimeout(() => {
+      setToggle(postId, true);
+    }, 100);
+  };
+
+  // Handle navigation to user profile
+  const navigateToUserProfile = (username) => {
+    // Close drawer first
+    if (onClose) onClose();
+
+    // Then navigate with slight delay
+    setTimeout(() => {
+      navigate(`/profile/${username}`);
+    }, 100);
+  };
+
+  // Handle navigation to hashtag page
+  const navigateToHashtag = (hashtag) => {
+    // Close drawer first
+    if (onClose) onClose();
+
+    // Then navigate with slight delay
+    setTimeout(() => {
+      navigate(`/explore/tags/${hashtag}`);
+    }, 100);
   };
 
   // Load avatar for a user
@@ -93,16 +123,16 @@ const SearchDrawerContent = () => {
         }
 
         // For users
-        // const usersResponse = await api.get("/users/suggested");
-        // if (usersResponse.data?.success) {
-        //   const suggestedUsers = usersResponse.data.data || [];
-        //   setUsers(suggestedUsers);
+        const usersResponse = await api.get("/users/suggested");
+        if (usersResponse.data?.success) {
+          const suggestedUsers = usersResponse.data.data || [];
+          setUsers(suggestedUsers);
 
-        //   // Load avatars for suggested users
-        //   for (const user of suggestedUsers) {
-        //     await loadAvatar(user);
-        //   }
-        // }
+          // Load avatars for suggested users
+          for (const user of suggestedUsers) {
+            await loadAvatar(user);
+          }
+        }
       } catch (error) {
         console.error("Error fetching search data:", error);
         // Use some sample data if API fails
@@ -141,8 +171,11 @@ const SearchDrawerContent = () => {
   }, []);
 
   // Search function with API calls
-  const performSearch = async () => {
-    if (!searchText || searchText.length === 0) {
+  const performSearch = async (searchValue) => {
+    // Use the passed searchValue parameter to ensure we have the latest value
+    const query = searchValue.trim();
+
+    if (!query || query.length === 0) {
       // When no search text, show default results
       setSearchResults(
         activeTab === "Users"
@@ -156,11 +189,11 @@ const SearchDrawerContent = () => {
 
     setSearching(true);
     try {
-
       if (activeTab === "Users") {
         // API call to search for a specific user
         try {
-          const response = await api.get(`/users/${searchText}`);
+          console.log(`Searching for user: "${query}"`); // Debug log
+          const response = await api.get(`/users/${query}`);
           if (response.data && response.data.success) {
             const user = response.data.data;
             setSearchResults([user]);
@@ -181,7 +214,7 @@ const SearchDrawerContent = () => {
         // Filter hashtags locally
         const searchQuery = query.startsWith("#") ? query.substring(1) : query;
         const filteredHashtags = hashtags.filter((hashtag) =>
-          hashtag.name?.toLowerCase().includes(searchQuery)
+          hashtag.name?.toLowerCase().includes(searchQuery.toLowerCase())
         );
         setSearchResults(filteredHashtags);
       } else if (activeTab === "Posts") {
@@ -213,34 +246,6 @@ const SearchDrawerContent = () => {
     }
   };
 
-  // Filter results based on search text
-  useEffect(() => {
-    if (!searchText || activeTab === "Posts") {
-      return; // For posts, we handle search directly in performSearch
-    }
-
-    const query = searchText.toLowerCase();
-
-    if (activeTab === "Users") {
-      // Filter users by username, firstName, lastName, or email
-      const filteredUsers = users.filter(
-        (user) =>
-          user.username?.toLowerCase().includes(query) ||
-          user.firstName?.toLowerCase().includes(query) ||
-          user.lastName?.toLowerCase().includes(query) ||
-          user.email?.toLowerCase().includes(query)
-      );
-      setSearchResults(filteredUsers);
-    } else if (activeTab === "Hashtags") {
-      // Filter hashtags - if search starts with #, remove it for comparison
-      const searchQuery = query.startsWith("#") ? query.substring(1) : query;
-      const filteredHashtags = hashtags.filter((hashtag) =>
-        hashtag.name?.toLowerCase().includes(searchQuery)
-      );
-      setSearchResults(filteredHashtags);
-    }
-  }, [searchText, activeTab, users, hashtags]);
-
   // Handle tab change
   const handleTabChange = (key) => {
     setActiveTab(key);
@@ -248,7 +253,7 @@ const SearchDrawerContent = () => {
 
     // Reset search when switching tabs
     if (searchText) {
-      performSearch();
+      performSearch(searchText);
     } else {
       // Show default results based on tab
       setSearchResults(
@@ -259,18 +264,31 @@ const SearchDrawerContent = () => {
 
   // Handle search text change with debounce
   const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchText(value);
+    const newValue = e.target.value;
+    setSearchText(newValue);
 
-    // If we already have a timer, clear it
-    if (window.searchTimer) {
-      clearTimeout(window.searchTimer);
+    // Clear any existing timers
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
     }
 
-    // Set a new timer
-    window.searchTimer = setTimeout(() => {
-      performSearch();
-    }, 500);
+    // Set a new timer - capture the current value in the closure
+    searchTimerRef.current = setTimeout(() => {
+      performSearch(newValue); // Pass the current value directly to avoid stale state
+    }, 300); // Reduced debounce time for better responsiveness
+  };
+
+  // Handle immediate search on Enter key
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      // Clear any pending timer
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+
+      // Perform search immediately with current input value
+      performSearch(e.target.value);
+    }
   };
 
   // Format post date
@@ -283,9 +301,20 @@ const SearchDrawerContent = () => {
         day: "numeric",
       });
     } catch (error) {
+      console.log(error);
+      
       return dateString;
     }
   };
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="search-drawer h-full flex flex-col" data-theme={theme}>
@@ -294,6 +323,7 @@ const SearchDrawerContent = () => {
         <Input
           value={searchText}
           onChange={handleSearchChange}
+          onKeyPress={handleKeyPress}
           placeholder={
             activeTab === "Users"
               ? "Search users"
@@ -359,7 +389,9 @@ const SearchDrawerContent = () => {
           <Empty
             description={
               <span style={{ color: isDark ? "#a8a8a8" : "#737373" }}>
-                No results found
+                {searchText
+                  ? `No results found for "${searchText}"`
+                  : "No results found"}
               </span>
             }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -370,7 +402,8 @@ const SearchDrawerContent = () => {
             {searchResults.map((user) => (
               <div
                 key={user.id || user.username}
-                className="search-result-item relative flex items-center space-x-3 p-3 shadow-sm"
+                className="search-result-item relative flex items-center space-x-3 p-3 shadow-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={() => navigateToUserProfile(user.username)}
               >
                 <div className="flex-shrink-0">
                   {avatarUrls[user.username] ? (
@@ -408,10 +441,7 @@ const SearchDrawerContent = () => {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <a
-                    href={`/profile/${user.username}`}
-                    className="focus:outline-none"
-                  >
+                  <div className="focus:outline-none">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold search-result-username">
@@ -446,7 +476,7 @@ const SearchDrawerContent = () => {
                         {user.email}
                       </p>
                     )}
-                  </a>
+                  </div>
                 </div>
               </div>
             ))}
@@ -457,7 +487,8 @@ const SearchDrawerContent = () => {
             {searchResults.map((hashtag) => (
               <div
                 key={hashtag.id}
-                className="search-result-item relative flex items-center space-x-3 p-3 shadow-sm"
+                className="search-result-item relative flex items-center space-x-3 p-3 shadow-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={() => navigateToHashtag(hashtag.name)}
               >
                 <div className="flex-shrink-0">
                   <div
@@ -476,10 +507,7 @@ const SearchDrawerContent = () => {
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <a
-                    href={`/explore/tags/${hashtag.name}`}
-                    className="focus:outline-none"
-                  >
+                  <div className="focus:outline-none">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold search-result-hashtag">
@@ -499,7 +527,7 @@ const SearchDrawerContent = () => {
                         {hashtag.postCount === 1 ? "post" : "posts"}
                       </p>
                     </div>
-                  </a>
+                  </div>
                 </div>
               </div>
             ))}
