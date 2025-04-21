@@ -224,6 +224,30 @@ public class PostController {
         }
     }
 
+    @GetMapping("/explore")
+    public ResponseEntity<?> getExplorePosts(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        try {
+            Optional<User> userOptional = userService.findByUsername(userDetails.getUsername());
+
+            if (userOptional.isEmpty()) {
+                return ResponseUtil.error("POST_017", "Not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+
+            User user = userOptional.get();
+            List<Post> feedPosts = postService.getExplorePosts();
+            List<PostDTO> postDTOs = feedPosts.stream()
+                    .map(post -> createPostDTOWithLikeStatus(post, user))
+                    .toList();
+
+            ResponseEntity<List<PostDTO>> originalResponse = ResponseEntity.ok(postDTOs);
+            return ResponseUtil.success(originalResponse, "Feed retrieved successfully");
+        } catch (Exception e) {
+            return ResponseUtil.error("POST_018", "Error retrieving feed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @PostMapping("/{id}/like")
     public ResponseEntity<?> likePost(
             @PathVariable Long id,

@@ -156,6 +156,10 @@ public class PostService {
         return postRepository.findByUserIsNotAndIsPrivateFalse(user);
     }
 
+    public List<Post> getExplorePosts() {
+        return postRepository.findAll();
+    }
+
     public List<Post> searchPosts(String query, String hashtag) {
         if (hashtag != null && !hashtag.isBlank()) {
             return postRepository.searchPublicPosts(
