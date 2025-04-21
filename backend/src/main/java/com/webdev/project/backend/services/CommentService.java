@@ -60,7 +60,7 @@ public class CommentService {
                 Optional<Comment> parentCommentOptional = commentRepository.findById(parentCommentId);
                 if (parentCommentOptional.isPresent()) {
                     Comment parentComment = parentCommentOptional.get();
-                    notificationProducer.sendCommentNotification(parentComment.getUser(), user, null, parentComment, NotificationType.COMMENT_REPLY); // Reply to a comment
+                    notificationProducer.sendCommentNotification(parentComment.getUser(), user, comment.getPost(), parentComment, NotificationType.COMMENT_REPLY); // Reply to a comment
                 }
             }
             else {

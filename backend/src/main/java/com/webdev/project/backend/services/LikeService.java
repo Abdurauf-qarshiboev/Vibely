@@ -4,6 +4,7 @@ import com.webdev.project.backend.entities.Comment;
 import com.webdev.project.backend.entities.Like;
 import com.webdev.project.backend.entities.Post;
 import com.webdev.project.backend.entities.User;
+import com.webdev.project.backend.enums.NotificationType;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
 import com.webdev.project.backend.rabbitmq.NotificationProducer;
 import com.webdev.project.backend.repositories.CommentRepository;
@@ -54,7 +55,7 @@ public class LikeService {
 
         // Send notification (async)
         if (!user.getId().equals(post.getUser().getId())) { // Skip liking own post
-            notificationProducer.sendLikeNotification(post.getUser(), user, post, null);
+            notificationProducer.sendLikeNotification(post.getUser(), user, post, null, NotificationType.LIKE_POST);
         }
 
         return post.getLikeCount();
@@ -103,7 +104,7 @@ public class LikeService {
 
         // Send notification (async)
         if (!user.getId().equals(comment.getUser().getId())) { // Skip liking own comment
-            notificationProducer.sendLikeNotification(comment.getUser(), user, null, comment);
+            notificationProducer.sendLikeNotification(comment.getUser(), user, comment.getPost(), comment, NotificationType.LIKE_COMMENT);
         }
 
 

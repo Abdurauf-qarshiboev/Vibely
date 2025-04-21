@@ -19,11 +19,11 @@ public class NotificationProducer {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public void sendLikeNotification(User recipient, User actor, Post post, Comment comment) {
+    public void sendLikeNotification(User recipient, User actor, Post post, Comment comment, NotificationType type) {
 
         NotificationMessage message;
 
-        if (comment == null && post != null) {
+        if (type == NotificationType.LIKE_POST) {
             message = new NotificationMessage(
                     recipient.getId(),
                     actor.getId(),
@@ -32,12 +32,12 @@ public class NotificationProducer {
                     null,
                     null
             );
-        } else if (comment != null && post == null) {
+        } else if (type == NotificationType.LIKE_COMMENT) {
             message = new NotificationMessage(
                     recipient.getId(),
                     actor.getId(),
                     NotificationType.LIKE_COMMENT,
-                    null,
+                    post.getId(),
                     comment.getId(),
                     null
             );
@@ -70,7 +70,7 @@ public class NotificationProducer {
                     recipient.getId(),
                     actor.getId(),
                     notificationType,
-                    null,
+                    post.getId(),
                     comment.getId(),
                     null
             );
