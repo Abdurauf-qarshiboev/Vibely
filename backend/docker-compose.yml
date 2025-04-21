@@ -23,6 +23,8 @@ services:
       - RABBIT_PORT=5672
       - ELASTIC_HOST=elasticsearch
       - ELASTIC_PORT=9200
+      - TELEGRAM_TOKEN=8162658480:AAGrbehHI5lTXWTLYoaEU7v-ebsv9q4d-vc
+      - TELEGRAM_CHAT=1316712488
     depends_on:
       postgres:
         condition: service_healthy
