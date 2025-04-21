@@ -1,6 +1,4 @@
-/* eslint-disable no-undef */
-/* eslint-disable no-unused-vars */
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { api } from "@/helpers/api";
 import { getImageUrl } from "../../../../utils/ImageHelpers";
 import { UserIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -11,8 +9,50 @@ import { Link } from "react-router-dom";
 
 const FollowRequests = ({ requests, onRequestHandled = () => {} }) => {
   const [processingIds, setProcessingIds] = useState({});
+  const [avatarUrls, setAvatarUrls] = useState({});
+  const [imageCache, setImageCache] = useState({});
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const isMounted = useRef(true);
+
+  // Load avatars when requests change
+  useEffect(() => {
+    isMounted.current = true;
+
+    const loadAvatars = async () => {
+      const newAvatarUrls = { ...avatarUrls };
+
+      for (const request of requests) {
+        if (request.avatar && !avatarUrls[request.request_id]) {
+          try {
+            const url = await getImageUrl(
+              request.avatar,
+              imageCache,
+              setImageCache
+            );
+            if (url && isMounted.current) {
+              newAvatarUrls[request.request_id] = url;
+            }
+          } catch (error) {
+            console.error(
+              `Error loading avatar for request ${request.request_id}:`,
+              error
+            );
+          }
+        }
+      }
+
+      if (isMounted.current) {
+        setAvatarUrls(newAvatarUrls);
+      }
+    };
+
+    loadAvatars();
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, [requests]);
 
   // Format "requested_at" date
   const formatRequestDate = (dateString) => {
@@ -93,11 +133,9 @@ const FollowRequests = ({ requests, onRequestHandled = () => {} }) => {
                 to={`/profile/${request.username}`}
                 className="relative flex-shrink-0"
               >
-                {request.avatar ? (
+                {avatarUrls[request.request_id] ? (
                   <img
-                    src={`${process.env.REACT_APP_API_URL || ""}/media/${
-                      request.avatar
-                    }`}
+                    src={avatarUrls[request.request_id]}
                     alt={`${request.username}'s avatar`}
                     className="w-12 h-12 rounded-full object-cover"
                     onError={(e) => {
@@ -136,7 +174,7 @@ const FollowRequests = ({ requests, onRequestHandled = () => {} }) => {
               {/* User Info */}
               <div className="ml-3">
                 <Link
-                  to={`/profile/${request.username}`}
+                  to={`/user/${request.username}`}
                   className="font-medium hover:underline"
                 >
                   {request.username}

@@ -1,8 +1,11 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import { Input, Tabs, Empty, Spin } from "antd";
+import { Input, Tabs, Empty, Spin, message } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import { useTheme } from "@/context/ThemeContext";
-import { api, URL } from "../../../helpers/api";
+import { api } from "../../../helpers/api";
+import { useModalContext } from "@/context/main/ModalContext";
+import { getImageUrl } from "../../../utils/ImageHelpers";
 
 const { TabPane } = Tabs;
 
@@ -10,12 +13,18 @@ const SearchDrawerContent = () => {
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState("Users");
   const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [users, setUsers] = useState([]);
   const [hashtags, setHashtags] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [imageCache, setImageCache] = useState({});
+  const [avatarUrls, setAvatarUrls] = useState({});
+  const [postImageUrls, setPostImageUrls] = useState({});
 
-  // Use the theme context
+  // Use the theme and modal context
   const { theme } = useTheme();
+  const { setToggle } = useModalContext();
   const isDark = theme === "dark";
 
   // Force re-render when theme changes
@@ -27,7 +36,52 @@ const SearchDrawerContent = () => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // Fetch users and hashtags when component mounts
+  // Open post comments
+  const openPostComments = (postId) => {
+    setToggle(postId, true);
+  };
+
+  // Load avatar for a user
+  const loadAvatar = async (user) => {
+    if (!user || !user.avatar || avatarUrls[user.username]) return;
+
+    try {
+      const url = await getImageUrl(user.avatar, imageCache, setImageCache);
+      if (url) {
+        setAvatarUrls((prev) => ({
+          ...prev,
+          [user.username]: url,
+        }));
+      }
+    } catch (error) {
+      console.error(`Error loading avatar for ${user.username}:`, error);
+    }
+  };
+
+  // Load image for a post
+  const loadPostImage = async (post) => {
+    if (
+      !post ||
+      !post.images ||
+      post.images.length === 0 ||
+      postImageUrls[post.id]
+    )
+      return;
+
+    try {
+      const url = await getImageUrl(post.images[0], imageCache, setImageCache);
+      if (url) {
+        setPostImageUrls((prev) => ({
+          ...prev,
+          [post.id]: url,
+        }));
+      }
+    } catch (error) {
+      console.error(`Error loading image for post ${post.id}:`, error);
+    }
+  };
+
+  // Fetch initial data (hashtags and suggested users)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -39,10 +93,16 @@ const SearchDrawerContent = () => {
         }
 
         // For users
-        const usersResponse = await api.get("/users/suggested");
-        if (usersResponse.data?.success) {
-          setUsers(usersResponse.data.data || []);
-        }
+        // const usersResponse = await api.get("/users/suggested");
+        // if (usersResponse.data?.success) {
+        //   const suggestedUsers = usersResponse.data.data || [];
+        //   setUsers(suggestedUsers);
+
+        //   // Load avatars for suggested users
+        //   for (const user of suggestedUsers) {
+        //     await loadAvatar(user);
+        //   }
+        // }
       } catch (error) {
         console.error("Error fetching search data:", error);
         // Use some sample data if API fails
@@ -72,16 +132,6 @@ const SearchDrawerContent = () => {
             createdAt: "2025-04-17T11:43:39.107988",
           },
         ]);
-        setUsers([
-          {
-            id: 1,
-            username: "admin3",
-            firstName: "Admin3",
-            lastName: "Ultra",
-            email: "admin3@example.com",
-            role: "USER",
-          },
-        ]);
       } finally {
         setLoading(false);
       }
@@ -90,12 +140,83 @@ const SearchDrawerContent = () => {
     fetchData();
   }, []);
 
-  // Filter data based on search text
-  useEffect(() => {
-    if (!searchText) {
-      // When no search text, show all data
-      setSearchResults(activeTab === "Users" ? users : hashtags);
+  // Search function with API calls
+  const performSearch = async () => {
+    if (!searchText || searchText.length === 0) {
+      // When no search text, show default results
+      setSearchResults(
+        activeTab === "Users"
+          ? users
+          : activeTab === "Hashtags"
+          ? hashtags
+          : posts
+      );
       return;
+    }
+
+    setSearching(true);
+    try {
+
+      if (activeTab === "Users") {
+        // API call to search for a specific user
+        try {
+          const response = await api.get(`/users/${searchText}`);
+          if (response.data && response.data.success) {
+            const user = response.data.data;
+            setSearchResults([user]);
+
+            // Load avatar for the found user
+            await loadAvatar(user);
+          } else {
+            setSearchResults([]);
+          }
+        } catch (error) {
+          console.error("User search error:", error);
+          setSearchResults([]);
+          if (error.response && error.response.status !== 404) {
+            message.error("Error searching for users");
+          }
+        }
+      } else if (activeTab === "Hashtags") {
+        // Filter hashtags locally
+        const searchQuery = query.startsWith("#") ? query.substring(1) : query;
+        const filteredHashtags = hashtags.filter((hashtag) =>
+          hashtag.name?.toLowerCase().includes(searchQuery)
+        );
+        setSearchResults(filteredHashtags);
+      } else if (activeTab === "Posts") {
+        // Search posts via API
+        try {
+          const response = await api.get(
+            `/posts/search?q=${encodeURIComponent(query)}`
+          );
+          if (response.data && response.data.success) {
+            const fetchedPosts = response.data.data || [];
+            setPosts(fetchedPosts);
+            setSearchResults(fetchedPosts);
+
+            // Load images for posts
+            for (const post of fetchedPosts) {
+              await loadPostImage(post);
+            }
+          } else {
+            setSearchResults([]);
+          }
+        } catch (error) {
+          console.error("Post search error:", error);
+          setSearchResults([]);
+          message.error("Error searching for posts");
+        }
+      }
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Filter results based on search text
+  useEffect(() => {
+    if (!searchText || activeTab === "Posts") {
+      return; // For posts, we handle search directly in performSearch
     }
 
     const query = searchText.toLowerCase();
@@ -110,7 +231,7 @@ const SearchDrawerContent = () => {
           user.email?.toLowerCase().includes(query)
       );
       setSearchResults(filteredUsers);
-    } else {
+    } else if (activeTab === "Hashtags") {
       // Filter hashtags - if search starts with #, remove it for comparison
       const searchQuery = query.startsWith("#") ? query.substring(1) : query;
       const filteredHashtags = hashtags.filter((hashtag) =>
@@ -120,8 +241,50 @@ const SearchDrawerContent = () => {
     }
   }, [searchText, activeTab, users, hashtags]);
 
+  // Handle tab change
   const handleTabChange = (key) => {
     setActiveTab(key);
+    setSearchResults([]);
+
+    // Reset search when switching tabs
+    if (searchText) {
+      performSearch();
+    } else {
+      // Show default results based on tab
+      setSearchResults(
+        key === "Users" ? users : key === "Hashtags" ? hashtags : posts
+      );
+    }
+  };
+
+  // Handle search text change with debounce
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchText(value);
+
+    // If we already have a timer, clear it
+    if (window.searchTimer) {
+      clearTimeout(window.searchTimer);
+    }
+
+    // Set a new timer
+    window.searchTimer = setTimeout(() => {
+      performSearch();
+    }, 500);
+  };
+
+  // Format post date
+  const formatPostDate = (dateString) => {
+    try {
+      if (!dateString) return "";
+      return new Date(dateString).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   return (
@@ -130,9 +293,13 @@ const SearchDrawerContent = () => {
       <div className="p-5">
         <Input
           value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          onChange={handleSearchChange}
           placeholder={
-            activeTab === "Users" ? "Search by username" : "Search by hashtag"
+            activeTab === "Users"
+              ? "Search users"
+              : activeTab === "Hashtags"
+              ? "Search hashtags"
+              : "Search posts"
           }
           prefix={
             !searchText && (
@@ -150,7 +317,7 @@ const SearchDrawerContent = () => {
         />
       </div>
 
-      {/* Tabs - Users and Hashtags */}
+      {/* Tabs - Users, Hashtags, and Posts */}
       <Tabs
         defaultActiveKey="Users"
         activeKey={activeTab}
@@ -162,6 +329,7 @@ const SearchDrawerContent = () => {
       >
         <TabPane tab="Users" key="Users" />
         <TabPane tab="Hashtags" key="Hashtags" />
+        <TabPane tab="Posts" key="Posts" />
       </Tabs>
 
       {/* Recent searches */}
@@ -183,7 +351,7 @@ const SearchDrawerContent = () => {
           searchText.length > 0 ? "h-full" : "h-[47rem]"
         } hide-scrollbar`}
       >
-        {loading ? (
+        {loading || searching ? (
           <div className="flex justify-center pt-10">
             <Spin size="large" />
           </div>
@@ -201,28 +369,57 @@ const SearchDrawerContent = () => {
           <div className="space-y-3">
             {searchResults.map((user) => (
               <div
-                key={user.id}
+                key={user.id || user.username}
                 className="search-result-item relative flex items-center space-x-3 p-3 shadow-sm"
               >
                 <div className="flex-shrink-0">
-                  <img
-                    className="h-10 w-10 rounded-full object-cover"
-                    src={
-                      user.avatar ||
-                      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                    }
-                    alt={user.username || "User avatar"}
-                  />
+                  {avatarUrls[user.username] ? (
+                    <img
+                      className="h-10 w-10 rounded-full object-cover"
+                      src={avatarUrls[user.username]}
+                      alt={user.username || "User avatar"}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src =
+                          "https://placehold.co/300x300/gray/white?text=User";
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        isDark ? "bg-gray-800" : "bg-gray-200"
+                      }`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-gray-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                    </div>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <a
-                    href={`/profile/${user.id}`}
+                    href={`/profile/${user.username}`}
                     className="focus:outline-none"
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-semibold search-result-username">
                           {user.username || "Username"}
+                          {user.verified && (
+                            <span className="ml-1 text-blue-500">✓</span>
+                          )}
+                          {user.private && <span className="ml-1">🔒</span>}
                         </p>
                         <p className="text-sm search-result-fullname">
                           {user.firstName} {user.lastName}
@@ -254,7 +451,7 @@ const SearchDrawerContent = () => {
               </div>
             ))}
           </div>
-        ) : (
+        ) : activeTab === "Hashtags" ? (
           // Hashtags list
           <div className="space-y-3">
             {searchResults.map((hashtag) => (
@@ -303,6 +500,58 @@ const SearchDrawerContent = () => {
                       </p>
                     </div>
                   </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Posts grid - 2 columns
+          <div className="grid grid-cols-2 gap-2">
+            {searchResults.map((post) => (
+              <div
+                key={post.id}
+                className="cursor-pointer"
+                onClick={() => openPostComments(post.id)}
+              >
+                <div className="relative aspect-square overflow-hidden rounded">
+                  {postImageUrls[post.id] ? (
+                    <img
+                      src={postImageUrls[post.id]}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src =
+                          "https://placehold.co/300x300/gray/white?text=No+Image";
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className={`w-full h-full flex items-center justify-center ${
+                        isDark ? "bg-gray-800" : "bg-gray-200"
+                      }`}
+                    >
+                      <span
+                        className={`text-sm ${
+                          isDark ? "text-gray-400" : "text-gray-600"
+                        }`}
+                      >
+                        Loading...
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Post info overlay on hover */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-50 transition-all duration-200 flex flex-col justify-end">
+                    <div className="p-2 text-white transform translate-y-full hover:translate-y-0 transition-transform duration-200">
+                      <h3 className="text-sm font-medium truncate">
+                        {post.title}
+                      </h3>
+                      <p className="text-xs opacity-80">
+                        {formatPostDate(post.createdAt || post.createdAt)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

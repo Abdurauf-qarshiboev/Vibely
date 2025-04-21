@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -6,6 +7,11 @@ import { useTheme } from "@/context/ThemeContext";
 import BlogCommentsPage from "../blogs/BlogCommentsPage";
 import { api } from "@/helpers/api";
 import { getImageUrl } from "../../../utils/ImageHelpers";
+import {
+  followHelpers,
+  FOLLOW_STATUS,
+  useDebugMode,
+} from "@/helpers/followHelpers";
 import {
   CameraIcon,
   UserIcon,
@@ -23,14 +29,16 @@ const UserProfilePage = () => {
   const { user: currentUser } = useAuth();
   const { setToggle } = useModalContext();
   const { theme } = useTheme();
+  const { debugLog } = useDebugMode();
   const isDark = theme === "dark";
   const [activeTab, setActiveTab] = useState("posts");
   const [userPosts, setUserPosts] = useState([]);
   const [profileData, setProfileData] = useState(null);
-  const [followStatus, setFollowStatus] = useState("none"); // none, following, requested
+  const [followStatus, setFollowStatus] = useState(FOLLOW_STATUS.NONE);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [imageCache, setImageCache] = useState({});
   const [loading, setLoading] = useState(true);
+  const [followLoading, setFollowLoading] = useState(false);
   const [error, setError] = useState(null);
   const fetchAttempted = useRef(false);
   const postsAttemptedRef = useRef(false);
@@ -61,32 +69,80 @@ const UserProfilePage = () => {
   const loadAvatar = async (avatarId) => {
     if (!avatarId) return;
     try {
-      console.log("Loading avatar with ID:", avatarId);
+      debugLog("Loading avatar with ID:", avatarId);
       const url = await getImageUrl(avatarId, imageCache, setImageCache);
       if (url) {
         setAvatarUrl(url);
-        console.log("Avatar URL loaded successfully");
+        debugLog("Avatar URL loaded successfully");
       }
     } catch (error) {
       console.error("Error loading avatar:", error);
     }
   };
 
-  // Handle follow action
-  const handleFollowAction = async () => {
-    if (!profileData) return;
+  // Check and update follow status
+  const refreshFollowStatus = async () => {
+    if (isOwnProfile || !username) return;
 
     try {
-      if (followStatus === "none") {
-        // Start following or send request
-        const { data } = await api.post(`users/${username}/follow`);
+      const status = await followHelpers.getFollowStatus(username);
+      debugLog("Follow status from API:", status);
 
-        // If the account is private, the status will be pending
-        if (profileData.private && data.data?.status === "pending") {
-          setFollowStatus("requested");
+      if (status.followedByYou) {
+        setFollowStatus(FOLLOW_STATUS.FOLLOWING);
+      } else {
+        // Check sessionStorage for pending requests
+        const pendingRequests = JSON.parse(
+          sessionStorage.getItem("pendingRequests") || "[]"
+        );
+        const isPending = pendingRequests.includes(username);
+
+        setFollowStatus(
+          isPending ? FOLLOW_STATUS.REQUESTED : FOLLOW_STATUS.NONE
+        );
+      }
+    } catch (error) {
+      console.error("Error refreshing follow status:", error);
+    }
+  };
+
+  // Handle follow action with improved error handling
+  const handleFollowAction = async () => {
+    if (!profileData || followLoading || isOwnProfile) return;
+
+    setFollowLoading(true);
+
+    try {
+      if (followStatus === FOLLOW_STATUS.NONE) {
+        // Follow or request to follow
+        debugLog(`Attempting to follow ${username}`);
+        const result = await followHelpers.followUser(username);
+
+        if (result.alreadyFollowing) {
+          setFollowStatus(FOLLOW_STATUS.FOLLOWING);
+          message.info("You are already following this user");
+          // Update profile data to reflect correct state
+          setProfileData((prev) => ({
+            ...prev,
+            followedByYou: true,
+          }));
+        } else if (result.isPending) {
+          setFollowStatus(FOLLOW_STATUS.REQUESTED);
           message.success("Follow request sent");
+
+          // Save pending request in sessionStorage
+          const pendingRequests = JSON.parse(
+            sessionStorage.getItem("pendingRequests") || "[]"
+          );
+          if (!pendingRequests.includes(username)) {
+            pendingRequests.push(username);
+            sessionStorage.setItem(
+              "pendingRequests",
+              JSON.stringify(pendingRequests)
+            );
+          }
         } else {
-          setFollowStatus("following");
+          setFollowStatus(FOLLOW_STATUS.FOLLOWING);
           message.success(`You are now following ${username}`);
 
           // Update follower count
@@ -97,12 +153,28 @@ const UserProfilePage = () => {
         }
       } else {
         // Unfollow or cancel request
-        await api.delete(`users/${username}/unfollow`);
-        setFollowStatus("none");
-        message.success(`You've unfollowed ${username}`);
+        debugLog(`Attempting to unfollow ${username}`);
+        await followHelpers.unfollowUser(username);
 
-        // Only decrease follower count if we were actually following (not just requested)
-        if (followStatus === "following") {
+        const wasRequested = followStatus === FOLLOW_STATUS.REQUESTED;
+        setFollowStatus(FOLLOW_STATUS.NONE);
+
+        // Remove from pending requests if needed
+        if (wasRequested) {
+          const pendingRequests = JSON.parse(
+            sessionStorage.getItem("pendingRequests") || "[]"
+          );
+          const updatedRequests = pendingRequests.filter((u) => u !== username);
+          sessionStorage.setItem(
+            "pendingRequests",
+            JSON.stringify(updatedRequests)
+          );
+
+          message.success("Follow request canceled");
+        } else {
+          message.success(`You've unfollowed ${username}`);
+
+          // Update follower count
           setProfileData((prev) => ({
             ...prev,
             followersCount: Math.max(0, prev.followersCount - 1),
@@ -111,49 +183,39 @@ const UserProfilePage = () => {
       }
     } catch (error) {
       console.error("Follow action failed:", error);
-      message.error("Failed to update follow status");
-    }
-  };
 
-  // Get follow button text
-  const getFollowButtonText = () => {
-    if (followStatus === "following") {
-      return "Following";
-    } else if (followStatus === "requested") {
-      return "Requested";
-    } else if (profileData?.followingYou) {
-      return "Follow Back";
-    } else {
-      return "Follow";
-    }
-  };
-
-  // Check if user is being followed or has a pending request
-  const checkFollowStatus = async (username) => {
-    try {
-      const response = await api.get(`users/${username}`);
-      if (response.data && response.data.success) {
-        const userData = response.data.data;
-
-        // Set follow status
-        if (userData.followedByYou) {
-          setFollowStatus("following");
-        } else {
-          // Check if there's a pending request (needs to be determined by your API)
-          // This is a placeholder - you might need to modify this based on your API
-          const requestsResponse = await api.get("users/follow-requests/sent");
-          const sentRequests = requestsResponse.data?.data?.requests || [];
-          const isPending = sentRequests.some(
-            (req) => req.username === username
-          );
-
-          setFollowStatus(isPending ? "requested" : "none");
-        }
+      // Handle specific error cases
+      if (error.response?.data?.error?.code === "FOLLOW_002L") {
+        setFollowStatus(FOLLOW_STATUS.FOLLOWING);
+        message.info("You are already following this user");
+      } else {
+        message.error(
+          error.response?.data?.error?.message ||
+            "Failed to update follow status"
+        );
       }
-    } catch (error) {
-      console.error("Error checking follow status:", error);
-      setFollowStatus("none");
+    } finally {
+      setFollowLoading(false);
     }
+  };
+
+  // Get follow button text based on status
+  const getFollowButtonText = () => {
+    if (followLoading) return "Loading...";
+
+    switch (followStatus) {
+      case FOLLOW_STATUS.FOLLOWING:
+        return "Following";
+      case FOLLOW_STATUS.REQUESTED:
+        return "Requested";
+      default:
+        return profileData?.followingYou ? "Follow Back" : "Follow";
+    }
+  };
+
+  // Handle back button click
+  const handleBack = () => {
+    navigate(-1);
   };
 
   // Fetch user profile data
@@ -170,6 +232,7 @@ const UserProfilePage = () => {
 
       try {
         // Fetch user profile data
+        debugLog(`Fetching profile for ${username}`);
         const userResponse = await api.get(`users/${username}`, {
           signal: controller.signal,
         });
@@ -178,6 +241,7 @@ const UserProfilePage = () => {
 
         if (userResponse.data && userResponse.data.success) {
           const userData = userResponse.data.data;
+          debugLog("User profile data:", userData);
 
           // Format user data
           setProfileData({
@@ -204,13 +268,20 @@ const UserProfilePage = () => {
             await loadAvatar(userData.avatar);
           }
 
-          // Check if current user is following this user
-          if (currentUser && currentUser.username !== username) {
+          // Set initial follow status
+          if (!isOwnProfile) {
             if (userData.followedByYou) {
-              setFollowStatus("following");
+              setFollowStatus(FOLLOW_STATUS.FOLLOWING);
             } else {
-              // Check for pending requests
-              await checkFollowStatus(username);
+              // Check sessionStorage for pending requests
+              const pendingRequests = JSON.parse(
+                sessionStorage.getItem("pendingRequests") || "[]"
+              );
+              setFollowStatus(
+                pendingRequests.includes(username)
+                  ? FOLLOW_STATUS.REQUESTED
+                  : FOLLOW_STATUS.NONE
+              );
             }
           }
         } else {
@@ -220,7 +291,7 @@ const UserProfilePage = () => {
         if (!isMounted) return;
 
         if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
-          console.log("Profile request was canceled during navigation");
+          debugLog("Profile request was canceled during navigation");
         } else {
           console.error("Error fetching user profile:", error);
           setError("Failed to load user profile");
@@ -241,9 +312,9 @@ const UserProfilePage = () => {
       fetchAttempted.current = false;
       postsAttemptedRef.current = false;
     };
-  }, [username, currentUser]);
+  }, [username, currentUser, isOwnProfile]);
 
-  // Fetch user posts - Improved and stable version
+  // Fetch user posts
   useEffect(() => {
     const controller = new AbortController();
     let isMounted = true;
@@ -268,7 +339,7 @@ const UserProfilePage = () => {
       setLoading(true);
 
       try {
-        console.log("Fetching posts for user:", username);
+        debugLog("Fetching posts for user:", username);
 
         const postsResponse = await api.get(`/posts/user?user=${username}`, {
           signal: controller.signal,
@@ -278,7 +349,7 @@ const UserProfilePage = () => {
 
         if (postsResponse.data && postsResponse.data.success) {
           const posts = postsResponse.data.data || [];
-          console.log(`Found ${posts.length} posts for user ${username}`);
+          debugLog(`Found ${posts.length} posts for user ${username}`);
 
           // Process posts to include image URLs
           const processedPosts = [];
@@ -315,7 +386,7 @@ const UserProfilePage = () => {
           // Set posts and update count data
           setUserPosts(processedPosts);
 
-          // Update post count in profile data - safely
+          // Update post count in profile data
           setProfileData((prev) => {
             if (!prev) return prev;
             return {
@@ -324,14 +395,14 @@ const UserProfilePage = () => {
             };
           });
 
-          console.log("User posts loaded successfully:", processedPosts.length);
+          debugLog("User posts loaded successfully:", processedPosts.length);
         }
       } catch (error) {
         if (!isMounted) return;
 
         // Only log non-aborted errors as real errors
         if (error.name === "CanceledError" || error.code === "ERR_CANCELED") {
-          console.log(
+          debugLog(
             "Posts request was canceled - this is normal during navigation"
           );
         } else {
@@ -354,12 +425,7 @@ const UserProfilePage = () => {
       isMounted = false;
       controller.abort();
     };
-  }, [username, profileData, isOwnProfile]); // Depend on profileData to ensure we have privacy info
-
-  // Handle back button click
-  const handleBack = () => {
-    navigate(-1);
-  };
+  }, [username, profileData, isOwnProfile]);
 
   // Show loading state
   if (loading && !profileData) {
@@ -469,15 +535,16 @@ const UserProfilePage = () => {
                   <>
                     <button
                       onClick={handleFollowAction}
+                      disabled={followLoading}
                       className={`px-4 py-1 rounded-lg font-medium ${
-                        followStatus === "following" ||
-                        followStatus === "requested"
+                        followStatus !== FOLLOW_STATUS.NONE
                           ? isDark
                             ? "bg-gray-800"
                             : "bg-gray-100"
                           : "bg-blue-500 text-white"
+                      } ${
+                        followLoading ? "opacity-70 cursor-not-allowed" : ""
                       }`}
-                      disabled={followStatus === "requested"}
                     >
                       {getFollowButtonText()}
                     </button>
@@ -566,29 +633,39 @@ const UserProfilePage = () => {
       </div>
 
       {/* Private Account Notice */}
-      {profileData?.private && !profileData?.followedByYou && !isOwnProfile && (
-        <div className="mt-8 text-center">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <LockClosedIcon className="h-10 w-10 text-gray-400" />
+      {profileData?.private &&
+        followStatus !== FOLLOW_STATUS.FOLLOWING &&
+        !isOwnProfile && (
+          <div className="mt-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <LockClosedIcon className="h-10 w-10 text-gray-400" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">This Account is Private</h2>
+            <p className="text-gray-500 max-w-md mx-auto mb-6">
+              Follow this account to see their photos and videos.
+            </p>
+            {followStatus !== FOLLOW_STATUS.REQUESTED && !followLoading && (
+              <button
+                onClick={handleFollowAction}
+                className="px-6 py-2 rounded-lg font-medium bg-blue-500 text-white"
+              >
+                Follow
+              </button>
+            )}
+            {followStatus === FOLLOW_STATUS.REQUESTED && (
+              <button
+                onClick={handleFollowAction}
+                className="px-6 py-2 rounded-lg font-medium bg-gray-300 dark:bg-gray-700"
+              >
+                Requested
+              </button>
+            )}
           </div>
-          <h2 className="text-xl font-bold mb-2">This Account is Private</h2>
-          <p className="text-gray-500 max-w-md mx-auto mb-6">
-            Follow this account to see their photos and videos.
-          </p>
-          {followStatus !== "requested" && (
-            <button
-              onClick={handleFollowAction}
-              className="px-6 py-2 rounded-lg font-medium bg-blue-500 text-white"
-            >
-              Follow
-            </button>
-          )}
-        </div>
-      )}
+        )}
 
       {/* Only show tabs if account is not private or user is following or it's own profile */}
       {(!profileData?.private ||
-        profileData?.followedByYou ||
+        followStatus === FOLLOW_STATUS.FOLLOWING ||
         isOwnProfile) && (
         <>
           {/* Tabs */}

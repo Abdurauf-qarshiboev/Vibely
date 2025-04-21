@@ -16,10 +16,11 @@ import {
   UserOutlined,
   MenuOutlined,
 } from "@ant-design/icons";
-import { Layout, Menu, Drawer, Spin } from "antd";
+import { Layout, Menu, Drawer, Spin, Badge } from "antd";
 import MoreMenu from "../components/MoreMenu";
 import { useTheme } from "../context/ThemeContext";
 import { Outlet } from "react-router-dom";
+import { api } from "../helpers/api";
 
 const { Sider, Content } = Layout;
 
@@ -28,12 +29,25 @@ const DashboardLayout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedKey, setSelectedKey] = useState("1");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const moreButtonRef = useRef(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Fetch notification count
+  const fetchNotificationCount = async () => {
+    try {
+      const response = await api.get("/notifications");
+      if (response.data && response.data.success) {
+        setUnreadCount(response.data.data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching notification count:", error);
+    }
+  };
 
   // Set the selected key based on the current path
   useEffect(() => {
@@ -43,11 +57,30 @@ const DashboardLayout = () => {
       setSelectedKey("3");
     } else if (location.pathname.includes("/notifications")) {
       setSelectedKey("4");
+      // Clear badge when on notifications page
+      setUnreadCount(0);
     } else if (location.pathname.includes("/create")) {
       setSelectedKey("5");
     } else if (location.pathname.includes("/profile")) {
       setSelectedKey("6");
     }
+  }, [location.pathname]);
+
+  // Fetch notification count when component mounts and periodically
+  useEffect(() => {
+    // Fetch immediately on mount
+    fetchNotificationCount();
+
+    // Then set up interval to refresh (every 30 seconds)
+    const intervalId = setInterval(() => {
+      // Don't fetch if user is on notifications page
+      if (!location.pathname.includes("/notifications")) {
+        fetchNotificationCount();
+      }
+    }, 30000);
+
+    // Clean up on unmount
+    return () => clearInterval(intervalId);
   }, [location.pathname]);
 
   const showMoreMenu = () => {
@@ -156,9 +189,13 @@ const DashboardLayout = () => {
                 key: "4",
                 icon:
                   selectedKey === "4" ? (
-                    <BellFilled style={{ fontSize: 22 }} />
+                    <Badge count={0}>
+                      <BellFilled style={{ fontSize: 22 }} />
+                    </Badge>
                   ) : (
-                    <BellOutlined style={{ fontSize: 22 }} />
+                    <Badge className="z-99" count={unreadCount} overflowCount={10}>
+                      <BellOutlined style={{ fontSize: 22 }} />
+                    </Badge>
                   ),
                 label: "Notifications",
               },
@@ -220,7 +257,7 @@ const DashboardLayout = () => {
         title="Search"
         destroyOnClose
         placement="right"
-        width={400}
+        width={600}
         open={drawerOpen}
         onClose={closeDrawer}
         className={isDark ? "drawer-dark" : "drawer-light"}

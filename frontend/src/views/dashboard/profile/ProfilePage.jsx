@@ -110,7 +110,7 @@ const ProfilePage = () => {
           bio: user?.bio || "Personal blog",
           verified: user?.verified || false,
           postsCount: 0,
-          followersCount: user?.followersCount || 0,
+          followersCount: user?.followerCount || 0,
           followingCount: user?.followingCount || 0,
           pronouns: "he/him",
           phone: user?.phone,

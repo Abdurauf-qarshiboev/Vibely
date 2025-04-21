@@ -670,3 +670,15 @@ div[data-theme="dark"] a {
   max-height: 100%;
   margin: 0 auto;
 }
+
+bdi{
+  display: grid !important;
+  place-content: center !important;
+}
+
+sup, .ant-badge-count{
+  z-index: 90 !important;
+}
+.ant-scroll-number-only{
+  height: 11px !important;
+}
