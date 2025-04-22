@@ -556,7 +556,7 @@ div[data-theme="dark"] a {
 }
 
 [data-theme="dark"] .carousel-container {
-  background-color: #222;
+  background-color: transparent !important;
 }
 
 .carousel-item {

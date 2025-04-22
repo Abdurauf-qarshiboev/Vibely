@@ -4,6 +4,10 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import SearchDrawerContent from "../views/dashboard/blogs/SearchDrawerContent";
 import {
+  useSearchDrawerContext,
+  SearchDrawerProvider,
+} from "../context/main/SearchDrawerContext";
+import {
   HomeOutlined,
   HomeFilled,
   SearchOutlined,
@@ -30,7 +34,8 @@ const { Sider, Content } = Layout;
 
 const DashboardLayout = () => {
   const [moreMenuVisible, setMoreMenuVisible] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { isOpen, closeSearchDrawer, openSearchDrawer } =
+    useSearchDrawerContext();
   const [loading, setLoading] = useState(false);
   const [selectedKey, setSelectedKey] = useState("1");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -42,7 +47,7 @@ const DashboardLayout = () => {
   const location = useLocation();
 
   const [reportModalOpen, setReportModalOpen] = useState(false);
-  
+
   // Fetch notification count
   const fetchNotificationCount = async () => {
     try {
@@ -97,16 +102,13 @@ const DashboardLayout = () => {
     setMoreMenuVisible(false);
   };
 
+  // Update the drawer open function
   const showDrawer = () => {
-    setDrawerOpen(true);
+    openSearchDrawer();
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
     }, 2000);
-  };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
   };
 
   const handleMenuClick = ({ key }) => {
@@ -219,7 +221,10 @@ const DashboardLayout = () => {
             </button>
 
             <button
-              onClick={() =>{setReportModalOpen(true); hideMoreMenu()}}
+              onClick={() => {
+                setReportModalOpen(true);
+                hideMoreMenu();
+              }}
               className={`w-full text-left px-2 py-1 rounded-md transition-all flex items-center justify-start mb-1 font-semibold
     ${isDark ? "text-white hover:bg-white/10" : "text-black hover:bg-black/5"}
   `}
@@ -383,8 +388,8 @@ const DashboardLayout = () => {
         destroyOnClose
         placement="right"
         width={500}
-        open={drawerOpen}
-        onClose={closeDrawer}
+        open={isOpen} // Use context state
+        onClose={closeSearchDrawer} // Use context function
         className={isDark ? "drawer-dark" : "drawer-light"}
         data-theme={theme}
       >
@@ -401,7 +406,7 @@ const DashboardLayout = () => {
         ) : (
           <SearchDrawerContent
             key={`search-drawer-${theme}`}
-            onClose={closeDrawer}
+            onClose={closeSearchDrawer}
           />
         )}
       </Drawer>

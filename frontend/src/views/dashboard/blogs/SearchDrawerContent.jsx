@@ -6,6 +6,7 @@ import { api } from "../../../helpers/api";
 import { useModalContext } from "@/context/main/ModalContext";
 import { getImageUrl } from "../../../utils/ImageHelpers";
 import { useNavigate } from "react-router-dom";
+import VerifiedBadge from "../../../components/VerifiedBadge";
 
 const { TabPane } = Tabs;
 
@@ -34,6 +35,32 @@ const SearchDrawerContent = ({ onClose }) => {
   const isDark = theme === "dark";
   const navigate = useNavigate();
 
+  // Check if a hashtag was passed via sessionStorage
+  useEffect(() => {
+    try {
+      // Check if there's a hashtag search request in sessionStorage
+      const hashtagSearch = sessionStorage.getItem("hashtagSearch");
+      if (hashtagSearch) {
+        // Parse the stored data
+        const searchData = JSON.parse(hashtagSearch);
+
+        // Set the search text and tab
+        setSearchText(searchData.tag || "");
+        setActiveTab(searchData.tab || "Posts");
+
+        // If we have a tag, perform search immediately
+        if (searchData.tag) {
+          performSearch(searchData.tag);
+        }
+
+        // Clear the sessionStorage after use
+        sessionStorage.removeItem("hashtagSearch");
+      }
+    } catch (error) {
+      console.error("Error reading sessionStorage:", error);
+    }
+  }, []);
+
   // Force re-render when theme changes
   const [, forceUpdate] = useState({});
   useEffect(() => {
@@ -61,7 +88,7 @@ const SearchDrawerContent = ({ onClose }) => {
 
     // Then navigate with slight delay
     setTimeout(() => {
-      navigate(`/profile/${username}`);
+      navigate(`/user/${username}`);
     }, 100);
   };
 
@@ -454,37 +481,26 @@ const SearchDrawerContent = ({ onClose }) => {
                   <div className="focus:outline-none">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold search-result-username">
+                        <div className="flex items-center text-sm font-semibold search-result-username">
                           {user.username || "Username"}
-                          {user.verified && (
-                            <span className="ml-1 text-blue-500">✓</span>
-                          )}
+                          {user.verified && <VerifiedBadge />}
                           {user.private && <span className="ml-1">🔒</span>}
-                        </p>
-                        <p className="text-sm search-result-fullname">
+                        </div>
+                        <div className="text-sm search-result-fullname">
                           {user.firstName} {user.lastName}
-                        </p>
+                        </div>
                       </div>
-                      {user.role && (
-                        <p
-                          className={`text-xs font-medium ring-1 ring-inset rounded-md whitespace-nowrap px-2 py-0.5 ${
-                            isDark
-                              ? "bg-[#0A2D44] text-[#58A6FF] ring-[#58A6FF]/30"
-                              : "bg-blue-50 text-blue-700 ring-blue-600/20"
-                          }`}
-                        >
-                          {user.role}
-                        </p>
-                      )}
                     </div>
                     {user.email && (
-                      <p
-                        className={`w-fit whitespace-nowrap mt-0.5 py-0.5 text-xs font-medium ${
-                          isDark ? "text-[#4b96ff]" : "text-[#00376b]"
+                      <div
+                        className={`text-xs w-fit font-medium ring-1 ring-inset rounded-md whitespace-nowrap px-2 py-0.5 mt-1 ${
+                          isDark
+                            ? "bg-[#0A2D44] text-[#58A6FF] ring-[#58A6FF]/30"
+                            : "bg-blue-50 text-blue-700 ring-blue-600/20"
                         }`}
                       >
                         {user.email}
-                      </p>
+                      </div>
                     )}
                   </div>
                 </div>

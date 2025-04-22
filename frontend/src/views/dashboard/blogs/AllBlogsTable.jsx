@@ -1,15 +1,16 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
-import { Empty, Spin, Carousel } from "antd";
+import { Empty, Spin, Carousel, message } from "antd";
 import { Link } from "react-router-dom";
 import VerifiedBadge from "../../../components/VerifiedBadge";
 import { useBlogsContext } from "../../../context/main/BlogsContext";
 import { useModalContext } from "../../../context/main/ModalContext";
-import { useCommentsContext } from "../../../context/main/CommentsContext";
 import { useHashtagsContext } from "../../../context/main/HashtagsContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { api } from "../../../helpers/api";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import BlogPostSkeleton from "../../../components/skeletons/BlogPostSkeleton";
+import { useSearchDrawerContext } from "../../../context/main/SearchDrawerContext";
 
 // Custom arrow components for the carousel
 const NextArrow = (props) => (
@@ -27,9 +28,9 @@ const PrevArrow = (props) => (
 const AllBlogsTable = () => {
   const { blogs, allBlogs, timeSince } = useBlogsContext();
   const { setToggle } = useModalContext();
-  const { getCommentDraft, updateCommentDraft, submitComment } =
-    useCommentsContext();
-  const { processedText, handleHashtagClick } = useHashtagsContext();
+  const { processedText, handleHashtagClick: contextHandleHashtagClick } =
+    useHashtagsContext();
+
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const [user, setUser] = useState({});
@@ -37,6 +38,31 @@ const AllBlogsTable = () => {
   const [postsData, setPostsData] = useState([]);
   const [imageCache, setImageCache] = useState({});
   const [initialLoading, setInitialLoading] = useState(true);
+  const [submittingComments, setSubmittingComments] = useState({});
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const { openSearchDrawer, setActiveTab, setSearchQuery } =
+    useSearchDrawerContext();
+
+  // Custom hashtag click handler for explicit hashtag lists
+  const handleHashtagClick = (tag) => {
+    // Make sure tag is a string
+    const tagString = typeof tag === "string" ? tag : String(tag).trim();
+    console.log("Hashtag clicked:", tagString);
+
+    sessionStorage.setItem(
+      "hashtagSearch",
+      JSON.stringify({
+        tag: tag, // Store as string
+        tab: "Hashtags",
+      })
+    );
+    // Open search drawer with the hashtag
+    openSearchDrawer();
+    setActiveTab("Posts"); // Make sure this matches the exact tab key
+    setTimeout(() => {
+      setSearchQuery(tagString);
+    }, 100); // Add a small delay to ensure drawer is open
+  };
 
   // Helper function to convert blob to data URL
   const blobToDataURL = (blob) => {
@@ -217,8 +243,55 @@ const AllBlogsTable = () => {
     }
   };
 
-  const handleSubmitComment = (blogId, username) => {
-    submitComment(blogId, username);
+  // Handle updating comment draft
+  const updateCommentDraft = (blogId, text) => {
+    setCommentDrafts((prev) => ({
+      ...prev,
+      [blogId]: text,
+    }));
+  };
+
+  // Get comment draft for a specific post
+  const getCommentDraft = (blogId) => {
+    return commentDrafts[blogId] || "";
+  };
+
+  // Handle comment submission with direct API call
+  const handleSubmitComment = async (blogId) => {
+    // Check if there's a comment to submit
+    const commentText = commentDrafts[blogId];
+    if (!commentText || commentText.trim() === "") return;
+
+    try {
+      // Set the submitting state for this specific blog post
+      setSubmittingComments((prev) => ({ ...prev, [blogId]: true }));
+
+      // Submit the comment directly with API
+      await api.post(`posts/${blogId}/comments`, {
+        body: commentText,
+      });
+
+      // Clear the comment draft after submission
+      updateCommentDraft(blogId, "");
+
+      // Update comment count optimistically
+      setPostsData((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === blogId
+            ? { ...post, commentCount: post.commentCount + 1 }
+            : post
+        )
+      );
+
+      // Show success message
+      message.success("Comment posted successfully");
+    } catch (error) {
+      console.error("Failed to submit comment:", error);
+      message.error("Failed to post comment. Please try again.");
+    } finally {
+      // Clear the submitting state
+      setSubmittingComments((prev) => ({ ...prev, [blogId]: false }));
+    }
   };
 
   // Generate placeholder skeletons
@@ -429,7 +502,8 @@ const AllBlogsTable = () => {
                         </span>
                         {blog.title}
                       </div>
-                      <div onClick={(e) => handleHashtagClick(e)}>
+                      <div>
+                        {/* Post body with hashtag handling */}
                         <p
                           dangerouslySetInnerHTML={{
                             __html: processedText(blog.body || ""),
@@ -437,14 +511,17 @@ const AllBlogsTable = () => {
                           className={`mt-1 text-sm ${
                             isDark ? "text-gray-300" : "text-black"
                           }`}
+                          onClick={contextHandleHashtagClick} // Use the context's hashtag handler for body text
                         ></p>
+
                         {/* Add hashtags display below the post body */}
                         {blog.hashtags && blog.hashtags.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-1">
                             {blog.hashtags.map((tag, index) => (
                               <span
                                 key={index}
-                                className={`text-blue-500 text-sm hover:text-blue-800 cursor-pointer`}
+                                className="text-blue-500 text-sm hover:text-blue-800 cursor-pointer"
+                                onClick={() => handleHashtagClick(tag)} // Use our custom handler for explicit hashtags
                               >
                                 #{tag}
                               </span>
@@ -468,7 +545,7 @@ const AllBlogsTable = () => {
                       </div>
                     )}
 
-                    {/* Commenting section */}
+                    {/* Desktop Commenting section */}
                     <div
                       className={`hidden sm:flex mt-3 items-start space-x-4 border-b pb-2 ${
                         isDark ? "border-gray-800" : "border-gray-200"
@@ -478,7 +555,7 @@ const AllBlogsTable = () => {
                         <form
                           onSubmit={(e) => {
                             e.preventDefault();
-                            handleSubmitComment(blog.id, user.username);
+                            handleSubmitComment(blog.id);
                           }}
                         >
                           <div className="relative">
@@ -489,7 +566,7 @@ const AllBlogsTable = () => {
                               Add a comment
                             </label>
                             <textarea
-                              value={getCommentDraft(blog.id) || ""}
+                              value={getCommentDraft(blog.id)}
                               onChange={(e) =>
                                 updateCommentDraft(blog.id, e.target.value)
                               }
@@ -505,26 +582,79 @@ const AllBlogsTable = () => {
                             />
                             <button
                               type="submit"
-                              className="inline-flex items-center rounded-md text-sm font-semibold bg-transparent text-gray-400 hover:text-gray-500 absolute top-1 right-0"
+                              disabled={submittingComments[blog.id]}
+                              className={`inline-flex items-center rounded-md text-sm font-semibold bg-transparent text-gray-400 hover:text-gray-500 absolute top-1 right-0 ${
+                                submittingComments[blog.id]
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
+                              }`}
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth="1.5"
-                                stroke="currentColor"
-                                className="size-6"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
-                                />
-                              </svg>
+                              {submittingComments[blog.id] ? (
+                                <div className="w-5 h-5 border-t-2 border-b-2 border-gray-500 rounded-full animate-spin"></div>
+                              ) : (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth="1.5"
+                                  stroke="currentColor"
+                                  className="size-6"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                                  />
+                                </svg>
+                              )}
                             </button>
                           </div>
                         </form>
                       </div>
+                    </div>
+
+                    {/* Mobile Commenting section */}
+                    <div
+                      className={`sm:hidden mt-3 items-start space-x-2 border-b pb-2 ${
+                        isDark ? "border-gray-800" : "border-gray-200"
+                      }`}
+                    >
+                      <form
+                        className="flex items-center w-full"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleSubmitComment(blog.id);
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={getCommentDraft(blog.id)}
+                          onChange={(e) =>
+                            updateCommentDraft(blog.id, e.target.value)
+                          }
+                          placeholder="Add a comment..."
+                          className={`flex-grow text-sm border-0 focus:ring-0 ${
+                            isDark
+                              ? "bg-black text-gray-300 placeholder:text-gray-500"
+                              : "bg-white text-gray-800 placeholder:text-gray-400"
+                          }`}
+                        />
+                        <button
+                          type="submit"
+                          disabled={submittingComments[blog.id]}
+                          className={`text-sm font-semibold bg-transparent ${
+                            getCommentDraft(blog.id)?.trim()
+                              ? "text-blue-500"
+                              : "text-gray-400"
+                          } ${submittingComments[blog.id] ? "opacity-50" : ""}`}
+                        >
+                          {submittingComments[blog.id] ? (
+                            <div className="w-4 h-4 border-t-2 border-b-2 border-gray-500 rounded-full animate-spin mr-1"></div>
+                          ) : (
+                            "Post"
+                          )}
+                        </button>
+                      </form>
                     </div>
                   </div>
                 </article>

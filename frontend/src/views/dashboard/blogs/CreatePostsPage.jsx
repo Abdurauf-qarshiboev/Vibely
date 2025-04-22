@@ -252,8 +252,8 @@ const CreatePostsPage = () => {
 
           {/* Title Field */}
           <div className="mb-4">
-            <label htmlFor="title" className="block text-sm font-medium mb-2">
-              Title
+            <label htmlFor="title" className="text-sm font-medium mb-2 flex items-center gap-3">
+              Title <span className="text-red-500 text-xs">(Maximum of 30 characters)</span>
             </label>
             <input
               id="title"
@@ -261,6 +261,8 @@ const CreatePostsPage = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Add a title..."
+              maxLength={30}
+              showCount
               className={`w-full px-3 py-2 rounded-md ${
                 isDark
                   ? "bg-gray-900 text-white border-gray-700"

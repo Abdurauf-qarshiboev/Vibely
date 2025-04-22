@@ -8,8 +8,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { mainMenu, profile, blogRoutes, allRoutes } from "./nav/routes";
-
+import { allRoutes } from "./nav/routes";
 // Layouts
 const DashboardLayout = lazy(() => import("../layouts/DashboardLayout"));
 const AuthLayout = lazy(() => import("../layouts/AuthLayout"));

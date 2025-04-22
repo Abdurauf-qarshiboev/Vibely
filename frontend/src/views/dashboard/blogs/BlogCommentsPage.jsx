@@ -1139,7 +1139,7 @@ const BlogCommentsPage = () => {
                     <div className="carousel-container w-full h-full overflow-hidden">
                       {loading && !postImages.length ? (
                         <div className="aspect-square w-full flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                          <div className="animate-spin rounded-full h-12 w-12 bg-transparent border-t-2 border-b-2 border-blue-500"></div>
                         </div>
                       ) : (
                         <Carousel
@@ -1156,7 +1156,7 @@ const BlogCommentsPage = () => {
                                   <img
                                     src={imageUrl}
                                     alt={`Post image ${index + 1}`}
-                                    className="object-contain w-full h-full"
+                                    className="object-cover w-full h-full"
                                     loading="lazy"
                                     onError={(e) => {
                                       e.target.onerror = null;
@@ -1170,7 +1170,7 @@ const BlogCommentsPage = () => {
                           ) : (
                             <div className="carousel-item">
                               <div className="aspect-square w-full h-full">
-                                <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800">
+                                <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-black">
                                   <img
                                     className="object-contain w-60 h-60"
                                     src="./assets/no-image-placeholder.jpeg"
