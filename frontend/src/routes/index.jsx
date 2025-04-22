@@ -59,7 +59,7 @@ const AppRoutes = () => {
 
     // Handle root path
     if (pathname === "") {
-      document.title = "MilliyGram | Home";
+      document.title = "SuratXona | Home";
       return;
     }
 
@@ -70,11 +70,11 @@ const AppRoutes = () => {
 
     // Match static routes first
     if (routePath === "auth/login") {
-      document.title = "MilliyGram | Log in";
+      document.title = "SuratXona | Log in";
       return;
     }
     if (routePath === "auth/signup") {
-      document.title = "MilliyGram | Sign up";
+      document.title = "SuratXona | Sign up";
       return;
     }
 
@@ -98,11 +98,11 @@ const AppRoutes = () => {
     });
 
     if (matchingRoute) {
-      document.title = `MilliyGram | ${matchingRoute.meta.title}`;
+      document.title = `SuratXona | ${matchingRoute.meta.title}`;
     } else if (routePath.startsWith("blogs/")) {
-      document.title = "MilliyGram | Post";
+      document.title = "SuratXona | Post";
     } else {
-      document.title = "MilliyGram";
+      document.title = "SuratXona";
     }
 
     console.log(
