@@ -350,7 +350,7 @@ export default function NotificationsPage() {
     }
     // For user-related notifications like FOLLOW_ACCEPT, navigate to profile
     else if (type === "FOLLOW_ACCEPT" || type === "FOLLOW") {
-      navigate(`/users/${fromUser.username}`);
+      navigate(`/user/${fromUser.username}`);
     }
   };
 
@@ -428,7 +428,7 @@ export default function NotificationsPage() {
             <Button
               size="small"
               type="default"
-              onClick={() => navigate(`/users/${fromUser.username}`)}
+              onClick={() => navigate(`/user/${fromUser.username}`)}
             >
               View Profile
             </Button>
@@ -562,12 +562,14 @@ export default function NotificationsPage() {
           <h1 className="text-2xl font-bold py-5 px-4">Notifications</h1>
 
           {unreadCount > 0 && (
-            <Tooltip title="Mark all as read">
-              <Button
-                icon={<EyeIcon className="w-5 h-5" />}
-                onClick={markAllAsRead}
-              ></Button>
-            </Tooltip>
+            <div className="p-3">
+              <Tooltip title="Mark all as read">
+                <Button
+                  icon={<EyeIcon className="w-5 h-5" />}
+                  onClick={markAllAsRead}
+                ></Button>
+              </Tooltip>
+            </div>
           )}
         </div>
 

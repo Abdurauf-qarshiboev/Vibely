@@ -179,19 +179,19 @@ const SearchDrawerContent = ({ onClose }) => {
         }
 
         // Fetch suggested users
-        const usersResponse = await api.get("/users/suggested");
-        if (usersResponse.data?.success) {
-          const suggestedUsers = usersResponse.data.data || [];
-          setAllResults((prev) => ({ ...prev, users: suggestedUsers }));
+        // const usersResponse = await api.get("/users/suggested");
+        // if (usersResponse.data?.success) {
+        //   const suggestedUsers = usersResponse.data.data || [];
+        //   setAllResults((prev) => ({ ...prev, users: suggestedUsers }));
 
-          // If users tab is active, update search results
-          if (activeTab === "Users") {
-            setSearchResults(suggestedUsers);
-          }
+        //   // If users tab is active, update search results
+        //   if (activeTab === "Users") {
+        //     setSearchResults(suggestedUsers);
+        //   }
 
-          // Load avatars for suggested users
-          await loadAvatars(suggestedUsers);
-        }
+        //   // Load avatars for suggested users
+        //   await loadAvatars(suggestedUsers);
+        // }
       } catch (error) {
         console.error("Error fetching search data:", error);
         // Use fallback data if API fails
@@ -594,7 +594,11 @@ const SearchDrawerContent = ({ onClose }) => {
                           isDark ? "text-gray-400" : "text-gray-600"
                         }`}
                       >
-                        Loading...
+                        <img
+                          className="w-[160px] h-12"
+                          src="../../../../public/Logo.png"
+                          alt="Loading..."
+                        />
                       </span>
                     </div>
                   )}

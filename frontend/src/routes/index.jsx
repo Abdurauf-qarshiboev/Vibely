@@ -41,7 +41,11 @@ const EditProfilePage = lazy(() =>
 // Loading component
 const Loading = () => (
   <div className="flex items-center justify-center h-screen text-white font-bold">
-    Loading...
+    <img
+      className="w-[160px] h-12"
+      src="../../public/Logo.png"
+      alt="Loading..."
+    />
   </div>
 );
 
@@ -58,7 +62,7 @@ const AppRoutes = () => {
 
     // Handle root path
     if (pathname === "") {
-      document.title = "SuratXona | Home";
+      document.title = "Vibely | Home";
       return;
     }
 
@@ -69,11 +73,11 @@ const AppRoutes = () => {
 
     // Match static routes first
     if (routePath === "auth/login") {
-      document.title = "SuratXona | Log in";
+      document.title = "Vibely | Log in";
       return;
     }
     if (routePath === "auth/signup") {
-      document.title = "SuratXona | Sign up";
+      document.title = "Vibely | Sign up";
       return;
     }
 
@@ -97,11 +101,11 @@ const AppRoutes = () => {
     });
 
     if (matchingRoute) {
-      document.title = `SuratXona | ${matchingRoute.meta.title}`;
+      document.title = `Vibely | ${matchingRoute.meta.title}`;
     } else if (routePath.startsWith("blogs/")) {
-      document.title = "SuratXona | Post";
+      document.title = "Vibely | Post";
     } else {
-      document.title = "SuratXona";
+      document.title = "Vibely";
     }
 
     console.log(

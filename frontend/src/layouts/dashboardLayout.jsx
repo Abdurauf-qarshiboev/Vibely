@@ -38,6 +38,7 @@ const DashboardLayout = () => {
     useSearchDrawerContext();
   const [loading, setLoading] = useState(false);
   const [selectedKey, setSelectedKey] = useState("1");
+  const [previousKey, setPreviousKey] = useState("1"); // Track previous key before search
   const [unreadCount, setUnreadCount] = useState(0);
 
   const moreButtonRef = useRef(null);
@@ -77,6 +78,14 @@ const DashboardLayout = () => {
     }
   }, [location.pathname]);
 
+  // Restore previous selected key when search drawer closes
+  useEffect(() => {
+    // When drawer closes and the current key is search (2)
+    if (!isOpen && selectedKey === "2") {
+      setSelectedKey(previousKey);
+    }
+  }, [isOpen]);
+
   // Fetch notification count when component mounts and periodically
   useEffect(() => {
     // Fetch immediately on mount
@@ -104,6 +113,13 @@ const DashboardLayout = () => {
 
   // Update the drawer open function
   const showDrawer = () => {
+    // Save current key before switching to search
+    if (selectedKey !== "2") {
+      setPreviousKey(selectedKey);
+    }
+
+    // Set selected key to search and open drawer
+    setSelectedKey("2");
     openSearchDrawer();
     setLoading(true);
     setTimeout(() => {
@@ -111,22 +127,35 @@ const DashboardLayout = () => {
     }, 2000);
   };
 
-  const handleMenuClick = ({ key }) => {
-    setSelectedKey(key);
+  // Custom drawer close handler
+  const handleCloseDrawer = () => {
+    // Restore previous key when drawer closes
+    setSelectedKey(previousKey);
+    closeSearchDrawer();
+  };
 
-    if (key === "1") {
-      navigate("/");
-    } else if (key === "2") {
+  const handleMenuClick = ({ key }) => {
+    // Handle search drawer differently
+    if (key === "2") {
       // "Search" key
       showDrawer();
-    } else if (key === "3") {
-      navigate("/explore");
-    } else if (key === "4") {
-      navigate("/notifications");
-    } else if (key === "5") {
-      navigate("/create");
-    } else if (key === "6") {
-      navigate("/profile");
+    } else {
+      // For non-search items, update both the selected key and previous key
+      setSelectedKey(key);
+      setPreviousKey(key);
+
+      // Navigate to the appropriate route
+      if (key === "1") {
+        navigate("/");
+      } else if (key === "3") {
+        navigate("/explore");
+      } else if (key === "4") {
+        navigate("/notifications");
+      } else if (key === "5") {
+        navigate("/create");
+      } else if (key === "6") {
+        navigate("/profile");
+      }
     }
   };
 
@@ -273,7 +302,13 @@ const DashboardLayout = () => {
                 : "text-[#000] hover:text-gray-800"
             }`}
           >
-            <span className="text-lg font-semibold">MilliyGram</span>
+            <span className="text-lg font-semibold">
+              <img
+                className="w-[136px] h-10"
+                src="../../public/Logo.png"
+                alt="Logo"
+              />
+            </span>
           </Link>
 
           <Menu
@@ -388,8 +423,8 @@ const DashboardLayout = () => {
         destroyOnClose
         placement="right"
         width={500}
-        open={isOpen} // Use context state
-        onClose={closeSearchDrawer} // Use context function
+        open={isOpen}
+        onClose={handleCloseDrawer} // Use our custom close handler
         className={isDark ? "drawer-dark" : "drawer-light"}
         data-theme={theme}
       >
@@ -406,7 +441,7 @@ const DashboardLayout = () => {
         ) : (
           <SearchDrawerContent
             key={`search-drawer-${theme}`}
-            onClose={closeSearchDrawer}
+            onClose={handleCloseDrawer} // Also pass our custom close handler here
           />
         )}
       </Drawer>

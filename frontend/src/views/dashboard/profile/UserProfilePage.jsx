@@ -667,29 +667,13 @@ const UserProfilePage = () => {
         followStatus !== FOLLOW_STATUS.FOLLOWING &&
         !isOwnProfile && (
           <div className="mt-8 text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <LockClosedIcon className="h-10 w-10 text-gray-400" />
+            <div className={` ${isDark ? "bg-gray-900" : "bg-gray-300"} w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center`}>
+              <LockClosedIcon className="h-10 w-10" />
             </div>
             <h2 className="text-xl font-bold mb-2">This Account is Private</h2>
             <p className="text-gray-500 max-w-md mx-auto mb-6">
               Follow this account to see their photos and videos.
             </p>
-            {followStatus !== FOLLOW_STATUS.REQUESTED && !followLoading && (
-              <button
-                onClick={handleFollowAction}
-                className="px-6 py-2 rounded-lg font-medium bg-blue-500 text-white"
-              >
-                Follow
-              </button>
-            )}
-            {followStatus === FOLLOW_STATUS.REQUESTED && (
-              <button
-                onClick={handleFollowAction}
-                className="px-6 py-2 rounded-lg font-medium bg-gray-300 dark:bg-gray-700"
-              >
-                Requested
-              </button>
-            )}
           </div>
         )}
 
