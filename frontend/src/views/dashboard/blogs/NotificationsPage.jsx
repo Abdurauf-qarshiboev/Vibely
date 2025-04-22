@@ -42,7 +42,6 @@ export default function NotificationsPage() {
   const openPostComments = (postId) => {
     setToggle(postId, true);
   };
-
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     try {
@@ -60,6 +59,25 @@ export default function NotificationsPage() {
       setLoading(false);
     }
   }, []);
+
+  // refresh notifications list every 3 seconds
+  useEffect(() => {
+    // Initial fetch
+    fetchNotifications();
+
+    // Set up interval for periodic fetching every 3 seconds
+    const intervalId = setInterval(() => {
+      // Only fetch if we're not already loading
+      if (!loading) {
+        fetchNotifications();
+      }
+    }, 3000);
+
+    // Clean up the interval when component unmounts
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [fetchNotifications, loading]);
 
   // Mark a notification as read
   const markAsRead = async (notificationId) => {
