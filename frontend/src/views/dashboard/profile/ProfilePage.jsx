@@ -10,6 +10,9 @@ import { useTheme } from "@/context/ThemeContext";
 import { api } from "@/helpers/api";
 import { getImageUrl } from "../../../utils/ImageHelpers";
 import BlogCommentsPage from "../../../views/dashboard/blogs/BlogCommentsPage";
+// Import the UserListModal component at the top of your file
+import UserListModal from "@/components/modals/UserListModal";
+
 import {
   CameraIcon,
   PlusIcon,
@@ -47,6 +50,10 @@ const ProfilePage = () => {
   const [loadingPostData, setLoadingPostData] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  // Add these state variables inside your ProfilePage component
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
 
   // Add this function to handle settings options selection
   const handleSettingsOption = (option) => {
@@ -324,14 +331,20 @@ const ProfilePage = () => {
                 <span className="text-sm sm:text-base">posts</span>
               </div>
 
-              <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
+              <div
+                className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1 cursor-pointer hover:opacity-80"
+                onClick={() => setShowFollowersModal(true)}
+              >
                 <span className="font-semibold">
                   {profileData.followersCount}
                 </span>
                 <span className="text-sm sm:text-base">followers</span>
               </div>
 
-              <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
+              <div
+                className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1 cursor-pointer hover:opacity-80"
+                onClick={() => setShowFollowingModal(true)}
+              >
                 <span className="font-semibold">
                   {profileData.followingCount}
                 </span>
@@ -621,6 +634,22 @@ const ProfilePage = () => {
         isOpen={showPasswordModal}
         closeModal={() => setShowPasswordModal(false)}
       />
+
+      {/* User list modals */}
+      <UserListModal
+        isOpen={showFollowersModal}
+        onClose={() => setShowFollowersModal(false)}
+        type="followers"
+        username={profileData.username}
+      />
+
+      <UserListModal
+        isOpen={showFollowingModal}
+        onClose={() => setShowFollowingModal(false)}
+        type="following"
+        username={profileData.username}
+      />
+      
     </div>
   );
 };
