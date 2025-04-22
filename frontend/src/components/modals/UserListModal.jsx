@@ -189,7 +189,7 @@ const UserListModal = ({ isOpen, onClose, type, username }) => {
         //   prev.filter((u) => u.username !== targetUsername)
         // );
 
-        message.warning(`Removing feature is coming soon...`);
+        message.info(`Removing feature is coming soon...`);
       }
     } catch (error) {
       console.error(`Error during follow/unfollow action:`, error);

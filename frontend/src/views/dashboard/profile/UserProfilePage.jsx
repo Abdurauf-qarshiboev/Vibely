@@ -487,6 +487,14 @@ const UserProfilePage = () => {
       }`}
     >
       {/* Top Section with Profile Info */}
+      <div className="relative top-5 left-5">
+        <button
+          onClick={handleBack}
+          className="mr-4 p-2 rounded-full text-gray-500"
+        >
+          <ChevronLeftIcon className="h-6 w-6" />
+        </button>
+      </div>
       <div className="max-w-4xl mx-auto px-4 pt-6 sm:pt-8">
         {/* Back button for mobile */}
         <div className="md:hidden mb-4 flex items-center">
