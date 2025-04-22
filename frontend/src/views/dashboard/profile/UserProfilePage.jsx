@@ -6,7 +6,7 @@ import { useModalContext } from "@/context/main/ModalContext";
 import { useTheme } from "@/context/ThemeContext";
 import BlogCommentsPage from "../blogs/BlogCommentsPage";
 import { api } from "@/helpers/api";
-import { getImageUrl } from "../../../utils/ImageHelpers";
+import { getImageUrl } from "@/utils/ImageHelpers";
 import {
   followHelpers,
   FOLLOW_STATUS,
@@ -20,8 +20,9 @@ import {
   LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import { PhotoIcon, BookmarkIcon, TagIcon } from "@heroicons/react/24/solid";
-import VerifiedBadge from "../../../components/VerifiedBadge";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { Tag, message } from "antd";
+import UserListModal from "@/components/modals/UserListModal"; // Import UserListModal
 
 const UserProfilePage = () => {
   const navigate = useNavigate();
@@ -42,6 +43,10 @@ const UserProfilePage = () => {
   const [error, setError] = useState(null);
   const fetchAttempted = useRef(false);
   const postsAttemptedRef = useRef(false);
+
+  // Add state for modals
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
 
   // Check if this profile belongs to the current user
   const isOwnProfile = currentUser?.username === username;
@@ -468,6 +473,13 @@ const UserProfilePage = () => {
     );
   }
 
+  // Determine if we should show followers/following modals
+  // (either not private, or following, or own profile)
+  const canViewFollowers =
+    !profileData?.private ||
+    followStatus === FOLLOW_STATUS.FOLLOWING ||
+    isOwnProfile;
+
   return (
     <div
       className={`w-full min-h-screen ${
@@ -583,7 +595,7 @@ const UserProfilePage = () => {
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats - Make clickable only if can view followers */}
             <div className="flex justify-center sm:justify-start space-x-5 sm:space-x-8 mb-4">
               <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
                 <span className="font-semibold">
@@ -592,14 +604,24 @@ const UserProfilePage = () => {
                 <span className="text-sm sm:text-base">posts</span>
               </div>
 
-              <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
+              <div
+                className={`flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1 ${
+                  canViewFollowers ? "cursor-pointer hover:opacity-80" : ""
+                }`}
+                onClick={() => canViewFollowers && setShowFollowersModal(true)}
+              >
                 <span className="font-semibold">
                   {profileData?.followersCount || 0}
                 </span>
                 <span className="text-sm sm:text-base">followers</span>
               </div>
 
-              <div className="flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1">
+              <div
+                className={`flex flex-col items-center sm:items-center sm:flex-row sm:space-x-1 ${
+                  canViewFollowers ? "cursor-pointer hover:opacity-80" : ""
+                }`}
+                onClick={() => canViewFollowers && setShowFollowingModal(true)}
+              >
                 <span className="font-semibold">
                   {profileData?.followingCount || 0}
                 </span>
@@ -939,6 +961,25 @@ const UserProfilePage = () => {
 
       {/* BlogCommentsPage component for post comments */}
       <BlogCommentsPage />
+
+      {/* Follower and Following Modals */}
+      {profileData && canViewFollowers && (
+        <>
+          <UserListModal
+            isOpen={showFollowersModal}
+            onClose={() => setShowFollowersModal(false)}
+            type="followers"
+            username={profileData.username}
+          />
+
+          <UserListModal
+            isOpen={showFollowingModal}
+            onClose={() => setShowFollowingModal(false)}
+            type="following"
+            username={profileData.username}
+          />
+        </>
+      )}
     </div>
   );
 };

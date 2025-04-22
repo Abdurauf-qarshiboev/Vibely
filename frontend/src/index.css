@@ -123,7 +123,7 @@ body {
 }
 
 .ant-empty{
-  margin-top: 200px !important;
+  margin-top: 100px !important;
 }
 /* =====================================
    SEARCH DRAWER SPECIFIC STYLES
@@ -618,7 +618,6 @@ div[data-theme="dark"] a {
   height: 100%;
 }
 
-/* Ensure the images maintain aspect ratio and cover their containers */
 .carousel-item img {
   object-fit: cover;
   width: 100%;
@@ -687,4 +686,46 @@ sup, .ant-badge-count{
 }
 #avatarinput{
   display: none !important;
+}
+
+/* Add these styles to your CSS file */
+.user-list-modal .ant-modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.user-list-modal .ant-modal-header {
+  margin-bottom: 0;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.user-list-modal .ant-modal-title {
+  font-weight: 600;
+  text-align: center;
+}
+
+.user-list-modal .ant-modal-close {
+  right: 16px;
+}
+
+.user-list-modal .ant-input::placeholder {
+  color: #8e8e8e;
+}
+
+.user-list-modal.dark-theme .ant-modal-content {
+  background-color: #262626;
+  color: white;
+}
+
+.user-list-modal.dark-theme .ant-modal-header {
+  background-color: #262626;
+  border-bottom-color: #373737;
+}
+
+.user-list-modal.dark-theme .ant-modal-title {
+  color: white;
+}
+
+.user-list-modal.dark-theme .ant-empty-description {
+  color: #a8a8a8;
 }
