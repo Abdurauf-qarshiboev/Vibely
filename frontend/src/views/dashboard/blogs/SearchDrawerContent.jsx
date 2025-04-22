@@ -56,7 +56,7 @@ const SearchDrawerContent = ({ onClose }) => {
 
     // Then navigate with slight delay
     setTimeout(() => {
-      navigate(`/profile/${username}`);
+      navigate(`/user/${username}`);
     }, 100);
   };
 
