@@ -249,7 +249,7 @@ const BlogCommentsPage = () => {
 
     setReplyingTo(username);
     setParentCommentId(rootParentId); // Always set to the top-level parent ID
-    setCommentText(`@${username} `);
+    setCommentText(`@${username}`);
     focusTextarea();
 
     // Make sure replies are visible for this parent
@@ -490,7 +490,6 @@ const BlogCommentsPage = () => {
     }
   };
 
-  // 1. Update handleSubmitComment function to increment comment count
   const handleSubmitComment = async (e) => {
     e.preventDefault();
 
@@ -540,13 +539,18 @@ const BlogCommentsPage = () => {
           setEditingCommentId(null);
         }
       } else {
+        // Determine if we're replying to a reply or to a parent comment
+        let targetParentId = parentCommentId;
+
         // Create new comment or reply
         const response = await api.post(`/posts/${blog.id}/comments`, {
           body: commentText,
-          parent_comment_id: parentCommentId,
+          parent_comment_id: targetParentId,
         });
 
         if (response.data && response.data.success) {
+          const newComment = response.data.data;
+
           // Increment the post's comment count
           setBlog((prev) => ({
             ...prev,
@@ -554,17 +558,17 @@ const BlogCommentsPage = () => {
           }));
 
           // If it was a reply to a comment, update that comment's replies
-          if (parentCommentId) {
+          if (targetParentId) {
             // Set visible replies for the parent comment
             setVisibleReplies((prev) => ({
               ...prev,
-              [parentCommentId]: true,
+              [targetParentId]: true,
             }));
 
             // Refetch replies for the parent comment
             try {
               const repliesResponse = await api.get(
-                `/comments/${parentCommentId}/replies`
+                `/comments/${targetParentId}/replies`
               );
 
               if (repliesResponse.data && repliesResponse.data.success) {
@@ -592,10 +596,15 @@ const BlogCommentsPage = () => {
                   isTruncated: reply.body?.length > 200,
                 }));
 
+                // Sort replies by their creation date to preserve thread order
+                processedReplies.sort(
+                  (a, b) => new Date(a.created_at) - new Date(b.created_at)
+                );
+
                 // Update comments with new replies
                 setComments((prevComments) =>
                   prevComments.map((comment) =>
-                    comment.id === parentCommentId
+                    comment.id === targetParentId
                       ? {
                           ...comment,
                           replies: processedReplies,
@@ -873,7 +882,7 @@ const BlogCommentsPage = () => {
 
                   <span
                     dangerouslySetInnerHTML={{
-                      __html: processedText(comment.body || ""),
+                      __html: processedText(formatMentions(comment.body || "")),
                     }}
                     className={`text-sm ${
                       isDark ? "text-gray-300" : "text-gray-800"
@@ -1052,6 +1061,17 @@ const BlogCommentsPage = () => {
         </div>
       </div>
     );
+  };
+
+  // Function to format @mentions as bold
+  const formatMentions = (text) => {
+    if (!text) return "";
+
+    // Regex to find words starting with @ (including letters, numbers, and underscores)
+    const mentionRegex = /(@\w+)/g;
+
+    // Replace mentions with bold text
+    return text.replace(mentionRegex, "<strong>$1</strong>");
   };
 
   return (
@@ -1428,11 +1448,12 @@ const BlogCommentsPage = () => {
                               comment.replies.length > 0 && (
                                 <div className="pl-10 ml-1 border-l border-gray-200 dark:border-white/30 mt-2">
                                   {comment.replies.map((reply) => (
-                                    <CommentItem
-                                      key={reply.id}
-                                      comment={reply}
-                                      isReply={true}
-                                    />
+                                    <div key={reply.id}>
+                                      <CommentItem
+                                        comment={reply}
+                                        isReply={true}
+                                      />
+                                    </div>
                                   ))}
                                 </div>
                               )}

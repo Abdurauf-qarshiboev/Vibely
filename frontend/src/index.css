@@ -678,6 +678,9 @@ bdi{
 
 sup, .ant-badge-count{
   z-index: 90 !important;
+  font-size: 11px !important;
+  height: 16px !important;
+  min-width: 16px !important;
 }
 .ant-scroll-number-only{
   height: 11px !important;

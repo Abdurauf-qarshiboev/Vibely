@@ -55,7 +55,7 @@ const SettingsOptionsModal = ({ isOpen, closeModal, onOptionSelect }) => {
                   </Dialog.Title>
                   <button
                     type="button"
-                    className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                    className="rounded-md text-red-400 hover:text-red-500 focus:outline-none"
                     onClick={closeModal}
                   >
                     <span className="sr-only">Close</span>
@@ -76,16 +76,6 @@ const SettingsOptionsModal = ({ isOpen, closeModal, onOptionSelect }) => {
                       {option.label}
                     </button>
                   ))}
-                  <button
-                    className={`w-full text-left py-3 px-4 rounded-md transition ${
-                      isDark
-                        ? "hover:bg-gray-800 text-gray-400"
-                        : "hover:bg-gray-100 text-gray-500"
-                    }`}
-                    onClick={closeModal}
-                  >
-                    Cancel
-                  </button>
                 </div>
               </Dialog.Panel>
             </Transition.Child>

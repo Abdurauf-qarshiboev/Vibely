@@ -15,9 +15,14 @@ const SearchDrawerContent = ({ onClose }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [hashtags, setHashtags] = useState([]);
-  const [posts, setPosts] = useState([]);
+
+  // Store all search results by type
+  const [allResults, setAllResults] = useState({
+    users: [],
+    hashtags: [],
+    posts: [],
+  });
+
   const [imageCache, setImageCache] = useState({});
   const [avatarUrls, setAvatarUrls] = useState({});
   const [postImageUrls, setPostImageUrls] = useState({});
@@ -56,7 +61,7 @@ const SearchDrawerContent = ({ onClose }) => {
 
     // Then navigate with slight delay
     setTimeout(() => {
-      navigate(`/user/${username}`);
+      navigate(`/profile/${username}`);
     }, 100);
   };
 
@@ -88,6 +93,15 @@ const SearchDrawerContent = ({ onClose }) => {
     }
   };
 
+  // Load avatars for multiple users
+  const loadAvatars = async (users) => {
+    if (!users || !users.length) return;
+
+    for (const user of users) {
+      await loadAvatar(user);
+    }
+  };
+
   // Load image for a post
   const loadPostImage = async (post) => {
     if (
@@ -111,7 +125,16 @@ const SearchDrawerContent = ({ onClose }) => {
     }
   };
 
-  // Fetch initial data (hashtags and suggested users)
+  // Load images for multiple posts
+  const loadPostImages = async (posts) => {
+    if (!posts || !posts.length) return;
+
+    for (const post of posts) {
+      await loadPostImage(post);
+    }
+  };
+
+  // Fetch initial data (trending hashtags and suggested users)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -119,49 +142,62 @@ const SearchDrawerContent = ({ onClose }) => {
         // Fetch hashtags
         const hashtagsResponse = await api.get("/hashtags/trending");
         if (hashtagsResponse.data?.success) {
-          setHashtags(hashtagsResponse.data.data || []);
+          const hashtagsData = hashtagsResponse.data.data || [];
+          setAllResults((prev) => ({ ...prev, hashtags: hashtagsData }));
+
+          // If hashtags tab is active, update search results
+          if (activeTab === "Hashtags") {
+            setSearchResults(hashtagsData);
+          }
         }
 
-        // For users
+        // Fetch suggested users
         const usersResponse = await api.get("/users/suggested");
         if (usersResponse.data?.success) {
           const suggestedUsers = usersResponse.data.data || [];
-          setUsers(suggestedUsers);
+          setAllResults((prev) => ({ ...prev, users: suggestedUsers }));
+
+          // If users tab is active, update search results
+          if (activeTab === "Users") {
+            setSearchResults(suggestedUsers);
+          }
 
           // Load avatars for suggested users
-          for (const user of suggestedUsers) {
-            await loadAvatar(user);
-          }
+          await loadAvatars(suggestedUsers);
         }
       } catch (error) {
         console.error("Error fetching search data:", error);
-        // Use some sample data if API fails
-        setHashtags([
-          {
-            id: 1,
-            name: "news",
-            postCount: 3,
-            createdAt: "2025-04-17T11:43:38.959644",
-          },
-          {
-            id: 2,
-            name: "morning",
-            postCount: 3,
-            createdAt: "2025-04-17T11:43:39.044774",
-          },
-          {
-            id: 3,
-            name: "technology",
-            postCount: 2,
-            createdAt: "2025-04-17T11:43:39.077091",
-          },
-          {
-            id: 4,
-            name: "elon",
-            postCount: 2,
-            createdAt: "2025-04-17T11:43:39.107988",
-          },
-        ]);
+        // Use fallback data if API fails
+        if (activeTab === "Hashtags" && !allResults.hashtags.length) {
+          const fallbackHashtags = [
+            {
+              id: 1,
+              name: "news",
+              postCount: 3,
+              createdAt: "2025-04-17T11:43:38.959644",
+            },
+            {
+              id: 2,
+              name: "morning",
+              postCount: 3,
+              createdAt: "2025-04-17T11:43:39.044774",
+            },
+            {
+              id: 3,
+              name: "technology",
+              postCount: 2,
+              createdAt: "2025-04-17T11:43:39.077091",
+            },
+            {
+              id: 4,
+              name: "elon",
+              postCount: 2,
+              createdAt: "2025-04-17T11:43:39.107988",
+            },
+          ];
+          setAllResults((prev) => ({ ...prev, hashtags: fallbackHashtags }));
+          setSearchResults(fallbackHashtags);
+        }
       } finally {
         setLoading(false);
       }
@@ -170,96 +206,77 @@ const SearchDrawerContent = ({ onClose }) => {
     fetchData();
   }, []);
 
-  // Search function with API calls
+  // Unified search function that uses the new search API endpoint
   const performSearch = async (searchValue) => {
-    // Use the passed searchValue parameter to ensure we have the latest value
     const query = searchValue.trim();
 
     if (!query || query.length === 0) {
-      // When no search text, show default results
-      setSearchResults(
-        activeTab === "Users"
-          ? users
-          : activeTab === "Hashtags"
-          ? hashtags
-          : posts
-      );
+      // When no search text, show default results based on active tab
+      updateResultsForTab(activeTab);
       return;
     }
 
     setSearching(true);
+
     try {
-      if (activeTab === "Users") {
-        // API call to search for a specific user
-        try {
-          console.log(`Searching for user: "${query}"`); // Debug log
-          const response = await api.get(`/users/${query}`);
-          if (response.data && response.data.success) {
-            const user = response.data.data;
-            setSearchResults([user]);
+      // Use the unified search endpoint
+      const response = await api.get(`/search?q=${encodeURIComponent(query)}`);
 
-            // Load avatar for the found user
-            await loadAvatar(user);
-          } else {
-            setSearchResults([]);
-          }
-        } catch (error) {
-          console.error("User search error:", error);
-          setSearchResults([]);
-          if (error.response && error.response.status !== 404) {
-            message.error("Error searching for users");
-          }
-        }
-      } else if (activeTab === "Hashtags") {
-        // Filter hashtags locally
-        const searchQuery = query.startsWith("#") ? query.substring(1) : query;
-        const filteredHashtags = hashtags.filter((hashtag) =>
-          hashtag.name?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setSearchResults(filteredHashtags);
-      } else if (activeTab === "Posts") {
-        // Search posts via API
-        try {
-          const response = await api.get(
-            `/posts/search?q=${encodeURIComponent(query)}`
-          );
-          if (response.data && response.data.success) {
-            const fetchedPosts = response.data.data || [];
-            setPosts(fetchedPosts);
-            setSearchResults(fetchedPosts);
+      if (response.data && response.data.success) {
+        const { users = [], hashtags = [], posts = [] } = response.data.data;
 
-            // Load images for posts
-            for (const post of fetchedPosts) {
-              await loadPostImage(post);
-            }
-          } else {
-            setSearchResults([]);
-          }
-        } catch (error) {
-          console.error("Post search error:", error);
-          setSearchResults([]);
-          message.error("Error searching for posts");
-        }
+        // Store all results
+        setAllResults({ users, hashtags, posts });
+
+        // Update displayed results based on active tab
+        updateResultsForTab(activeTab, { users, hashtags, posts });
+
+        // Load images in background
+        loadAvatars(users);
+        loadPostImages(posts);
+
+        // For posts users, also load their avatars
+        const postUsers = posts.map((post) => post.user).filter((user) => user);
+        loadAvatars(postUsers);
+      } else {
+        // Reset results if search fails
+        setSearchResults([]);
       }
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+      message.error("Error performing search");
     } finally {
       setSearching(false);
+    }
+  };
+
+  // Update displayed results based on active tab
+  const updateResultsForTab = (tab, results = null) => {
+    // Use provided results or fall back to stored results
+    const data = results || allResults;
+
+    switch (tab) {
+      case "Users":
+        setSearchResults(data.users || []);
+        break;
+      case "Hashtags":
+        setSearchResults(data.hashtags || []);
+        break;
+      case "Posts":
+        setSearchResults(data.posts || []);
+        break;
+      default:
+        setSearchResults([]);
     }
   };
 
   // Handle tab change
   const handleTabChange = (key) => {
     setActiveTab(key);
-    setSearchResults([]);
 
-    // Reset search when switching tabs
-    if (searchText) {
-      performSearch(searchText);
-    } else {
-      // Show default results based on tab
-      setSearchResults(
-        key === "Users" ? users : key === "Hashtags" ? hashtags : posts
-      );
-    }
+    // Update results based on new tab
+    updateResultsForTab(key);
   };
 
   // Handle search text change with debounce
@@ -274,8 +291,8 @@ const SearchDrawerContent = ({ onClose }) => {
 
     // Set a new timer - capture the current value in the closure
     searchTimerRef.current = setTimeout(() => {
-      performSearch(newValue); // Pass the current value directly to avoid stale state
-    }, 300); // Reduced debounce time for better responsiveness
+      performSearch(newValue);
+    }, 300);
   };
 
   // Handle immediate search on Enter key
@@ -302,7 +319,6 @@ const SearchDrawerContent = ({ onClose }) => {
       });
     } catch (error) {
       console.log(error);
-      
       return dateString;
     }
   };
@@ -324,13 +340,7 @@ const SearchDrawerContent = ({ onClose }) => {
           value={searchText}
           onChange={handleSearchChange}
           onKeyPress={handleKeyPress}
-          placeholder={
-            activeTab === "Users"
-              ? "Search users"
-              : activeTab === "Hashtags"
-              ? "Search hashtags"
-              : "Search posts"
-          }
+          placeholder="Search"
           prefix={
             !searchText && (
               <SearchOutlined
@@ -377,7 +387,7 @@ const SearchDrawerContent = ({ onClose }) => {
 
       {/* Search results */}
       <div
-        className={`flex-1 overflow-y-auto ${
+        className={`flex-1 overflow-y-auto p-4 ${
           searchText.length > 0 ? "h-full" : "h-[47rem]"
         } hide-scrollbar`}
       >
@@ -390,8 +400,8 @@ const SearchDrawerContent = ({ onClose }) => {
             description={
               <span style={{ color: isDark ? "#a8a8a8" : "#737373" }}>
                 {searchText
-                  ? `No results found for "${searchText}"`
-                  : "No results found"}
+                  ? `No ${activeTab.toLowerCase()} found for "${searchText}"`
+                  : `No ${activeTab.toLowerCase()} found`}
               </span>
             }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -518,8 +528,12 @@ const SearchDrawerContent = ({ onClose }) => {
                             isDark ? "text-[#a8a8a8]" : "text-[#737373]"
                           }`}
                         >
-                          Added on{" "}
-                          {new Date(hashtag.createdAt).toLocaleDateString()}
+                          {hashtag.createdAt && (
+                            <>
+                              Added on{" "}
+                              {new Date(hashtag.createdAt).toLocaleDateString()}
+                            </>
+                          )}
                         </p>
                       </div>
                       <p className="search-result-count-badge whitespace-nowrap px-2 py-0.5 text-xs font-medium rounded-md">
@@ -576,7 +590,7 @@ const SearchDrawerContent = ({ onClose }) => {
                         {post.title}
                       </h3>
                       <p className="text-xs opacity-80">
-                        {formatPostDate(post.createdAt || post.createdAt)}
+                        {formatPostDate(post.createdAt)}
                       </p>
                     </div>
                   </div>

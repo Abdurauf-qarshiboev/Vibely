@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "@/helpers/api";
 import { useTheme } from "@/context/ThemeContext";
@@ -8,10 +9,22 @@ import {
   CheckIcon,
   XMarkIcon,
   EyeIcon,
+  HeartIcon,
+  ChatBubbleLeftIcon,
+  ArrowUturnRightIcon,
+  AtSymbolIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircleIcon, UserPlusIcon } from "@heroicons/react/24/solid";
+import {
+  CheckCircleIcon,
+  UserPlusIcon,
+  HeartIcon as HeartSolidIcon,
+  ChatBubbleLeftIcon as ChatSolidIcon,
+} from "@heroicons/react/24/solid";
 import { getImageUrl } from "../../../utils/ImageHelpers";
 import { message, Button, Spin, Badge, Empty, Tooltip } from "antd";
+import { useModalContext } from "@/context/main/ModalContext";
+import BlogCommentsPage from "./BlogCommentsPage";
+import VerifiedBadge from "../../../components/VerifiedBadge";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
@@ -23,6 +36,12 @@ export default function NotificationsPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const navigate = useNavigate();
+  const { setToggle } = useModalContext();
+
+  // Open comment modal for a post
+  const openPostComments = (postId) => {
+    setToggle(postId, true);
+  };
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
@@ -145,6 +164,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     const loadAvatars = async () => {
       const newAvatarUrls = { ...avatarUrls };
+      let hasNewAvatars = false;
 
       for (const notification of notifications) {
         const user = notification.fromUser;
@@ -157,6 +177,7 @@ export default function NotificationsPage() {
             );
             if (url) {
               newAvatarUrls[user.username] = url;
+              hasNewAvatars = true;
             }
           } catch (error) {
             console.error(`Error loading avatar for ${user.username}:`, error);
@@ -164,7 +185,9 @@ export default function NotificationsPage() {
         }
       }
 
-      setAvatarUrls(newAvatarUrls);
+      if (hasNewAvatars) {
+        setAvatarUrls(newAvatarUrls);
+      }
     };
 
     if (notifications.length > 0) {
@@ -177,24 +200,135 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  // Get notification text based on type
+  const getNotificationText = (notification) => {
+    const { type, fromUser, post, comment } = notification;
+
+    switch (type) {
+      case "LIKE_POST":
+        return (
+          <>
+            <Link to={`/users/${fromUser.username}`} className="font-semibold">
+              {fromUser.username}
+            </Link>
+            {" liked your post "}
+            {post && (
+              <span className="font-medium">
+                "
+                {post.title.length > 30
+                  ? `${post.title.substring(0, 30)}...`
+                  : post.title}
+                "
+              </span>
+            )}
+          </>
+        );
+
+      case "COMMENT_POST":
+        return (
+          <>
+            <Link to={`/users/${fromUser.username}`} className="font-semibold">
+              {fromUser.username}
+            </Link>
+            {" commented on your post "}
+            {post && (
+              <span className="font-medium">
+                "
+                {post.title.length > 30
+                  ? `${post.title.substring(0, 30)}...`
+                  : post.title}
+                "
+              </span>
+            )}
+          </>
+        );
+
+      case "COMMENT_REPLY":
+        return (
+          <>
+            <Link to={`/users/${fromUser.username}`} className="font-semibold">
+              {fromUser.username}
+            </Link>
+            {" replied to your comment"}
+          </>
+        );
+
+      case "LIKE_COMMENT":
+        return (
+          <>
+            <Link to={`/users/${fromUser.username}`} className="font-semibold">
+              {fromUser.username}
+            </Link>
+            {" liked your comment"}
+          </>
+        );
+
+      case "FOLLOW_REQUEST":
+        return (
+          <>
+            <Link to={`/users/${fromUser.username}`} className="font-semibold">
+              {fromUser.username}
+            </Link>
+            {" wants to follow you"}
+          </>
+        );
+
+      case "FOLLOW_ACCEPT":
+        return (
+          <>
+            <Link to={`/users/${fromUser.username}`} className="font-semibold">
+              {fromUser.username}
+            </Link>
+            {" accepted your follow request"}
+          </>
+        );
+
+      default:
+        return (
+          <>
+            <Link to={`/users/${fromUser.username}`} className="font-semibold">
+              {fromUser.username}
+            </Link>
+            {" sent you a notification"}
+          </>
+        );
+    }
+  };
+
+  // Handle notification click
+  const handleNotificationClick = (notification) => {
+    // Mark as read
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+
+    const { type, fromUser, post, comment } = notification;
+
+    // For post-related or comment-related notifications, open the post comments
+    if (
+      post &&
+      ["LIKE_POST", "COMMENT_POST", "COMMENT_REPLY", "LIKE_COMMENT"].includes(
+        type
+      )
+    ) {
+      openPostComments(post.id);
+    }
+    // For user-related notifications like FOLLOW_ACCEPT, navigate to profile
+    else if (type === "FOLLOW_ACCEPT") {
+      navigate(`/users/${fromUser.username}`);
+    }
+  };
+
   // Render notification content based on type
   const renderNotificationContent = (notification) => {
-    const { type, fromUser, followId } = notification;
+    const { type, fromUser, followId, post } = notification;
 
     switch (type) {
       case "FOLLOW_REQUEST":
         return (
           <>
             <div className="flex-1">
-              <p className="mb-1">
-                <Link
-                  to={`/profile/${fromUser.username}`}
-                  className="font-semibold hover:underline"
-                >
-                  {fromUser.username}
-                </Link>
-                {" wants to follow you"}
-              </p>
+              <p className="mb-1">{getNotificationText(notification)}</p>
               <div className="flex space-x-2 mt-2">
                 <Button
                   size="small"
@@ -224,37 +358,45 @@ export default function NotificationsPage() {
       case "FOLLOW_ACCEPT":
         return (
           <div className="flex-1">
-            <p className="mb-1">
-              <Link
-                to={`/profile/${fromUser.username}`}
-                className="font-semibold hover:underline"
-              >
-                {fromUser.username}
-              </Link>
-              {" accepted your follow request"}
-            </p>
+            <p className="mb-1">{getNotificationText(notification)}</p>
             <Button
               size="small"
               type="default"
-              onClick={() => navigate(`/profile/${fromUser.username}`)}
+              onClick={() => navigate(`/users/${fromUser.username}`)}
             >
               View Profile
             </Button>
           </div>
         );
 
+      case "LIKE_POST":
+      case "COMMENT_POST":
+      case "COMMENT_REPLY":
+      case "LIKE_COMMENT":
+        return (
+          <div
+            className="flex-1 cursor-pointer"
+            onClick={() => handleNotificationClick(notification)}
+          >
+            <p className="mb-1">{getNotificationText(notification)}</p>
+            {post && (
+              <button
+                className="px-1 rounded border border-gray-300/90 bg-gray-200 hover:border-gray-400 transition duration-200 text-gray-700 text-xs mt-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openPostComments(post.id);
+                }}
+              >
+                View Post
+              </button>
+            )}
+          </div>
+        );
+
       default:
         return (
           <div className="flex-1">
-            <p className="mb-1">
-              <Link
-                to={`/profile/${fromUser.username}`}
-                className="font-semibold hover:underline"
-              >
-                {fromUser.username}
-              </Link>
-              {" sent you a notification"}
-            </p>
+            <p className="mb-1">{getNotificationText(notification)}</p>
           </div>
         );
     }
@@ -265,22 +407,44 @@ export default function NotificationsPage() {
     switch (type) {
       case "FOLLOW_REQUEST":
         return (
-          <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
-            <UserPlusIcon className="w-5 h-5 text-blue-500" />
+          <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-700">
+            <UserPlusIcon className="w-5 h-5 text-blue-100" />
           </div>
         );
 
       case "FOLLOW_ACCEPT":
         return (
-          <div className="p-2 rounded-full bg-green-100 dark:bg-green-900">
-            <CheckCircleIcon className="w-5 h-5 text-green-500" />
+          <div className="p-2 rounded-full bg-green-100 dark:bg-green-700">
+            <CheckCircleIcon className="w-5 h-5 text-green-100" />
+          </div>
+        );
+
+      case "LIKE_POST":
+      case "LIKE_COMMENT":
+        return (
+          <div className="p-2 rounded-full bg-red-100 dark:bg-red-700">
+            <HeartSolidIcon className="w-5 h-5 text-red-100" />
+          </div>
+        );
+
+      case "COMMENT_POST":
+        return (
+          <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-700">
+            <ChatSolidIcon className="w-5 h-5 text-purple-100" />
+          </div>
+        );
+
+      case "COMMENT_REPLY":
+        return (
+          <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-700">
+            <ArrowUturnRightIcon className="w-5 h-5 text-indigo-100" />
           </div>
         );
 
       default:
         return (
-          <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-800">
-            <CheckIcon className="w-5 h-5 text-gray-500" />
+          <div className="p-2 rounded-full bg-gray-400 border border-1 border-gray-500">
+            <CheckIcon className="w-5 h-5 text-gray-100" />
           </div>
         );
     }
@@ -288,22 +452,26 @@ export default function NotificationsPage() {
 
   return (
     <div
-      className={`min-h-screen ${
-        isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900"
+      className={`h-full ${
+        isDark ? "bg-black text-white" : "bg-white text-gray-900"
       }`}
     >
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Notifications</h1>
+      <div className="w-full mx-auto">
+        <div
+          className={`${
+            isDark
+              ? "bg-black/60 border-b-white/30"
+              : "bg-white/60 border-b-gray-300"
+          } backdrop-blur-md flex justify-between items-center mb-6 sticky top-0 z-50 border-b`}
+        >
+          <h1 className="text-2xl font-bold py-5 px-4">Notifications</h1>
 
           {unreadCount > 0 && (
             <Tooltip title="Mark all as read">
               <Button
                 icon={<EyeIcon className="w-5 h-5" />}
                 onClick={markAllAsRead}
-              >
-                Mark all as read
-              </Button>
+              ></Button>
             </Tooltip>
           )}
         </div>
@@ -313,11 +481,11 @@ export default function NotificationsPage() {
             <Spin size="large" />
           </div>
         ) : notifications.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-4 max-w-2xl mx-auto">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`flex items-start p-4 rounded-lg ${
+                className={`flex items-start p-4 rounded-lg border border-1 border-gray-400/30 ${
                   notification.read
                     ? isDark
                       ? "bg-gray-800/70"
@@ -328,11 +496,22 @@ export default function NotificationsPage() {
                 } ${
                   isDark ? "border-gray-800" : "border-gray-100"
                 } border shadow-sm`}
+                onClick={() =>
+                  [
+                    "LIKE_POST",
+                    "COMMENT_POST",
+                    "COMMENT_REPLY",
+                    "LIKE_COMMENT",
+                  ].includes(notification.type)
+                    ? handleNotificationClick(notification)
+                    : null
+                }
               >
                 {/* User Avatar */}
                 <Link
-                  to={`/profile/${notification.fromUser.username}`}
+                  to={`/user/${notification.fromUser.username}`}
                   className="relative mr-4 flex-shrink-0"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {avatarUrls[notification.fromUser.username] ? (
                     <img
@@ -355,19 +534,8 @@ export default function NotificationsPage() {
                   )}
 
                   {notification.fromUser.verified && (
-                    <span className="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-0.5">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-3 w-3"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
+                    <span className="absolute bottom-0 right-0 bg-white rounded-full p-0.5">
+                      <VerifiedBadge />
                     </span>
                   )}
                 </Link>
@@ -395,7 +563,10 @@ export default function NotificationsPage() {
                 {!notification.read && (
                   <Tooltip title="Mark as read">
                     <button
-                      onClick={() => markAsRead(notification.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(notification.id);
+                      }}
                       className={`p-2 rounded-full ${
                         isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"
                       }`}
@@ -415,6 +586,8 @@ export default function NotificationsPage() {
           />
         )}
       </div>
+
+      <BlogCommentsPage />
     </div>
   );
 }
