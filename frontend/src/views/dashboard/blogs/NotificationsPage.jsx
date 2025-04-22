@@ -9,19 +9,16 @@ import {
   CheckIcon,
   XMarkIcon,
   EyeIcon,
-  HeartIcon,
-  ChatBubbleLeftIcon,
   ArrowUturnRightIcon,
-  AtSymbolIcon,
 } from "@heroicons/react/24/outline";
 import {
   CheckCircleIcon,
   UserPlusIcon,
   HeartIcon as HeartSolidIcon,
-  ChatBubbleLeftIcon as ChatSolidIcon,
+  ChatBubbleLeftIcon as ChatSolidIcon, BellIcon, AcademicCapIcon,
 } from "@heroicons/react/24/solid";
-import { getImageUrl } from "../../../utils/ImageHelpers";
-import { message, Button, Spin, Badge, Empty, Tooltip } from "antd";
+import { getImageUrl } from "@/utils/ImageHelpers.js";
+import { message, Button, Spin, Empty, Tooltip } from "antd";
 import { useModalContext } from "@/context/main/ModalContext";
 import BlogCommentsPage from "./BlogCommentsPage";
 import VerifiedBadge from "../../../components/VerifiedBadge";
@@ -104,17 +101,17 @@ export default function NotificationsPage() {
   };
 
   // Handle follow requests (approve/reject)
-  const handleFollowRequest = async (followId, action, username) => {
-    if (processingIds[followId]) return;
+  const handleFollowRequest = async (id, action, username) => {
+    if (processingIds[id]) return;
 
-    setProcessingIds((prev) => ({ ...prev, [followId]: true }));
+    setProcessingIds((prev) => ({ ...prev, [id]: true }));
 
     try {
       if (action === "approve") {
-        await api.post(`users/follow-requests/${followId}/approve`);
+        await api.put(`notifications/${id}/accept`);
         message.success("Follow request approved");
       } else {
-        await api.delete(`users/follow-requests/${followId}/reject`);
+        await api.put(`notifications/${id}/reject`);
         message.success("Follow request rejected");
       }
 
@@ -138,7 +135,7 @@ export default function NotificationsPage() {
       console.error(`Error ${action}ing follow request:`, error);
       message.error(`Failed to ${action} request`);
     } finally {
-      setProcessingIds((prev) => ({ ...prev, [followId]: false }));
+      setProcessingIds((prev) => ({ ...prev, [id]: false }));
     }
   };
 
@@ -201,7 +198,7 @@ export default function NotificationsPage() {
 
   // Get notification text based on type
   const getNotificationText = (notification) => {
-    const { type, fromUser, post, comment } = notification;
+    const { type, fromUser, post } = notification;
 
     switch (type) {
       case "LIKE_POST":
@@ -262,6 +259,16 @@ export default function NotificationsPage() {
           </>
         );
 
+      case "FOLLOW":
+        return (
+            <>
+              <Link to={`/users/${fromUser.username}`} className="font-semibold">
+                {fromUser.username}
+              </Link>
+              {" is now following you. "}
+            </>
+        );
+
       case "FOLLOW_REQUEST":
         return (
           <>
@@ -280,6 +287,35 @@ export default function NotificationsPage() {
             </Link>
             {" accepted your follow request"}
           </>
+        );
+
+      case "FOLLOW_REJECT":
+        return (
+            <>
+              <Link to={`/users/${fromUser.username}`} className="font-semibold">
+                {fromUser.username}
+              </Link>
+              {" rejected your follow request"}
+            </>
+        );
+
+      case "NEW_POST":
+        return (
+            <>
+              <Link to={`/users/${fromUser.username}`} className="font-semibold">
+                {fromUser.username}
+              </Link>
+              {" has published a new post "}
+              {post && (
+                  <span className="font-medium">
+                "
+                    {post.title.length > 30
+                        ? `${post.title.substring(0, 30)}...`
+                        : post.title}
+                    "
+              </span>
+              )}
+            </>
         );
 
       default:
@@ -301,60 +337,91 @@ export default function NotificationsPage() {
       markAsRead(notification.id);
     }
 
-    const { type, fromUser, post, comment } = notification;
+    const { type, fromUser, post } = notification;
 
     // For post-related or comment-related notifications, open the post comments
     if (
       post &&
-      ["LIKE_POST", "COMMENT_POST", "COMMENT_REPLY", "LIKE_COMMENT"].includes(
+      ["LIKE_POST", "COMMENT_POST", "COMMENT_REPLY", "LIKE_COMMENT", "NEW_POST"].includes(
         type
       )
     ) {
       openPostComments(post.id);
     }
     // For user-related notifications like FOLLOW_ACCEPT, navigate to profile
-    else if (type === "FOLLOW_ACCEPT") {
+    else if (type === "FOLLOW_ACCEPT" || type === "FOLLOW") {
       navigate(`/users/${fromUser.username}`);
     }
   };
 
   // Render notification content based on type
   const renderNotificationContent = (notification) => {
-    const { type, fromUser, followId, post } = notification;
+    const { id, type, fromUser, post, status } = notification;
 
     switch (type) {
       case "FOLLOW_REQUEST":
-        return (
-          <>
-            <div className="flex-1">
-              <p className="mb-1">{getNotificationText(notification)}</p>
-              <div className="flex space-x-2 mt-2">
-                <Button
-                  size="small"
-                  danger
-                  onClick={() =>
-                    handleFollowRequest(followId, "reject", fromUser.username)
-                  }
-                  loading={processingIds[followId]}
-                >
-                  Decline
-                </Button>
-                <Button
-                  size="small"
-                  type="primary"
-                  onClick={() =>
-                    handleFollowRequest(followId, "approve", fromUser.username)
-                  }
-                  loading={processingIds[followId]}
-                >
-                  Accept
-                </Button>
-              </div>
-            </div>
-          </>
-        );
+        switch (status) {
+          case "ACCEPTED":
+            return (
+                <>
+                  <div className="flex-1">
+                    <p className="mb-1">{getNotificationText(notification)}</p>
+                    <div className="flex space-x-2 mt-2">
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+            Accepted
+          </span>
+                    </div>
+                  </div>
+                </>
+            );
+          case "REJECTED":
+            return (
+                <>
+                  <div className="flex-1">
+                    <p className="mb-1">{getNotificationText(notification)}</p>
+                    <div className="flex space-x-2 mt-2">
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+            Rejected
+          </span>
+                    </div>
+                  </div>
+                </>
+            );
+          default:
+              return (
+                  <>
+                    <div className="flex-1">
+                      <p className="mb-1">{getNotificationText(notification)}</p>
+                      <div className="flex space-x-2 mt-2">
+                        <Button
+                            size="small"
+                            danger
+                            onClick={() =>
+                                handleFollowRequest(id, "reject", fromUser.username)
+                            }
+                            loading={processingIds[id]}
+                        >
+                          Decline
+                        </Button>
+                        <Button
+                            size="small"
+                            type="primary"
+                            onClick={() =>
+                                handleFollowRequest(id, "approve", fromUser.username)
+                            }
+                            loading={processingIds[id]}
+                        >
+                          Accept
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+              );
+        }
+
 
       case "FOLLOW_ACCEPT":
+      case "FOLLOW":
         return (
           <div className="flex-1">
             <p className="mb-1">{getNotificationText(notification)}</p>
@@ -368,10 +435,18 @@ export default function NotificationsPage() {
           </div>
         );
 
+      case "FOLLOW_REJECT":
+        return (
+            <div className="flex-1">
+              <p className="mb-1">{getNotificationText(notification)}</p>
+            </div>
+        );
+
       case "LIKE_POST":
       case "COMMENT_POST":
       case "COMMENT_REPLY":
       case "LIKE_COMMENT":
+      case "NEW_POST":
         return (
           <div
             className="flex-1 cursor-pointer"
@@ -439,6 +514,27 @@ export default function NotificationsPage() {
             <ArrowUturnRightIcon className="w-5 h-5 text-indigo-100" />
           </div>
         );
+
+      case "NEW_POST":
+        return (
+            <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-700">
+              <BellIcon className="w-5 h-5 text-red-100" />
+            </div>
+        )
+
+      case "FOLLOW":
+        return (
+            <div className="p-2 rounded-full bg-green-100 dark:bg-green-700">
+              <AcademicCapIcon className="w-5 h-5 text-red-100" />
+            </div>
+        )
+
+      case "FOLLOW_REJECT":
+        return (
+            <div className="p-2 rounded-full bg-red-100 dark:bg-red-700">
+              <XMarkIcon className="w-5 h-5 text-red-100" />
+            </div>
+        )
 
       default:
         return (
