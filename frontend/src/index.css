@@ -682,3 +682,6 @@ sup, .ant-badge-count{
 .ant-scroll-number-only{
   height: 11px !important;
 }
+#avatarinput{
+  display: none !important;
+}

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+/* eslint-disable no-unused-vars */
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   Form,
@@ -21,11 +22,15 @@ import {
   EyeInvisibleOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
+  CameraOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
+import { api } from "../../helpers/api";
 
 const { Text } = Typography;
 
 export default function SignupPage() {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [passwordValue, setPasswordValue] = useState("");
   const [validationChecks, setValidationChecks] = useState({
@@ -35,6 +40,9 @@ export default function SignupPage() {
     hasMinLength: false,
   });
   const [loading, setLoading] = useState(false);
+  const [avatar, setAvatar] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const fileInputRef = useRef(null);
 
   const { signup } = useAuth();
 
@@ -58,6 +66,15 @@ export default function SignupPage() {
     }
   }, [passwordValue]);
 
+  // Clean up preview URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, []);
+
   // Calculate password strength
   const getPasswordStrength = () => {
     const { hasNumber, hasLowercase, hasUppercase, hasMinLength } =
@@ -76,6 +93,51 @@ export default function SignupPage() {
     return "#52c41a";
   };
 
+  // Handle avatar change
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB limit
+        message.error("Avatar image must be less than 5MB");
+        return;
+      }
+
+      if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
+        message.error("Only JPEG, JPG and PNG images are allowed");
+        return;
+      }
+
+      setAvatar(file);
+
+      // Clean up previous preview URL
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  // Trigger file input click
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Remove avatar
+  const removeAvatar = () => {
+    setAvatar(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (values) => {
     // Check password requirements
@@ -88,23 +150,57 @@ export default function SignupPage() {
       message.error("Please make sure your password meets all requirements");
       return;
     }
+
     setLoading(true);
-    // Create user data object
-    const userData = {
-      username: values.username,
-      password: values.password,
-      firstName: values.firstName,
-      lastName: values.lastName,
-      email: values.email,
-      phone: values.phone,
-      bio: values.bio || "",
-    };
 
     try {
+      // Create user data object
+      const userData = {
+        username: values.username,
+        password: values.password,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        phone: values.phone,
+        bio: values.bio || "",
+      };
+
+      // Create FormData object
+      const formData = new FormData();
+
+      // Add user data as JSON string
+      formData.append("request", JSON.stringify(userData));
+
+      // Add avatar if selected
+      if (avatar) {
+        formData.append("avatar", avatar);
+      }
+
       console.log("Signing up with:", userData);
-      await signup(userData);
+
+      const { data } = await api.post("auth/register", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log("Signup response:", data);
+
+      if (data?.error) {
+        message.warning(data.error?.message || "Registration failed");
+      } else {
+        message.success(
+          "Successfully registered. You can now login with your credentials."
+        );
+        navigate("/auth/login");
+      }
     } catch (error) {
-      console.error("Signup failed:", error);
+      console.error("Signup error:", error);
+      message.error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error?.message ||
+          "Registration failed! Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -131,6 +227,59 @@ export default function SignupPage() {
         >
           {/* Main Content */}
           <div className="space-y-6">
+            {/* Avatar Upload */}
+            <div className="p-6 rounded-lg bg-white shadow border border-1 border-gray-100 flex flex-col items-center">
+              <h2 className="text-lg font-medium mb-4 text-gray-900">
+                Profile Photo
+              </h2>
+
+              <div className="relative  mb-4">
+                <div
+                  className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200 flex items-center justify-center cursor-pointer"
+                  onClick={triggerFileInput}
+                >
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="Avatar preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <CameraOutlined
+                      style={{ fontSize: "2rem", color: "#bfbfbf" }}
+                    />
+                  )}
+
+                  <input
+                    id="avatarinput"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarChange}
+                    className="hidden bg-transparent"
+                    accept="image/png, image/jpeg, image/jpg"
+                  />
+                </div>
+
+                {previewUrl && (
+                  <button
+                    type="button"
+                    onClick={removeAvatar}
+                    className="size-6 grid place-content-center absolute right-0 -top-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  >
+                    <DeleteOutlined style={{ fontSize: "14px" }} />
+                  </button>
+                )}
+              </div>
+
+              <div className="text-center text-sm text-gray-500">
+                {!previewUrl ? (
+                  <span>Click to upload a profile photo (optional)</span>
+                ) : (
+                  <span>Click to change your profile photo</span>
+                )}
+              </div>
+            </div>
+
             {/* Account Details */}
             <div className="p-6 rounded-lg bg-white shadow border border-1 border-gray-100">
               <h2 className="text-lg font-medium mb-4 text-gray-900">
