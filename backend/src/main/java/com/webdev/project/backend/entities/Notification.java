@@ -1,6 +1,7 @@
 package com.webdev.project.backend.entities;
 
 import com.webdev.project.backend.enums.NotificationType;
+import com.webdev.project.backend.rabbitmq.NotificationStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -50,6 +51,11 @@ public class Notification {
     @Setter
     @Column(name = "read", nullable = false)
     private Boolean read = false;
+
+    @Setter
+    @Column(name = "status")
+    @Enumerated(EnumType.STRING)
+    private NotificationStatus status;
 
     @CreationTimestamp
     private Timestamp createdAt;

@@ -30,6 +30,7 @@ public class NotificationProducer {
                     NotificationType.LIKE_POST,
                     post.getId(),
                     null,
+                    null,
                     null
             );
         } else if (type == NotificationType.LIKE_COMMENT) {
@@ -39,6 +40,7 @@ public class NotificationProducer {
                     NotificationType.LIKE_COMMENT,
                     post.getId(),
                     comment.getId(),
+                    null,
                     null
             );
         } else {
@@ -63,6 +65,7 @@ public class NotificationProducer {
                     notificationType,
                     post.getId(),
                     null,
+                    null,
                     null
             );
         } else if (notificationType == NotificationType.COMMENT_REPLY) {
@@ -72,6 +75,7 @@ public class NotificationProducer {
                     notificationType,
                     post.getId(),
                     comment.getId(),
+                    null,
                     null
             );
         } else {
@@ -92,6 +96,7 @@ public class NotificationProducer {
                 NotificationType.FOLLOW,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -109,7 +114,8 @@ public class NotificationProducer {
                 NotificationType.FOLLOW_REQUEST,
                 null,
                 null,
-                follow.getId()
+                follow.getId(),
+                null
         );
 
         rabbitTemplate.convertAndSend(
@@ -124,6 +130,7 @@ public class NotificationProducer {
                 recipient.getId(),
                 actor.getId(),
                 NotificationType.FOLLOW_ACCEPT,
+                null,
                 null,
                 null,
                 null
@@ -141,6 +148,7 @@ public class NotificationProducer {
                 recipient.getId(),
                 actor.getId(),
                 NotificationType.FOLLOW_REJECT,
+                null,
                 null,
                 null,
                 null

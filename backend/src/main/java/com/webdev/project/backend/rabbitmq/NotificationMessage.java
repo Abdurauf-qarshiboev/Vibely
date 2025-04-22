@@ -24,4 +24,7 @@ public class NotificationMessage implements Serializable {
 
     // Fields for follow notifications
     private Long followId;        // Follow ID used to approve/reject request (optional)
+
+    // Field for notification status
+    private NotificationStatus status; // Sets status as accepted/rejected
 }
