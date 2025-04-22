@@ -160,4 +160,22 @@ public class NotificationProducer {
                 message
         );
     }
+
+    public void sendNewPostNotification(User recipient, User actor, Post post) {
+        NotificationMessage message = new NotificationMessage(
+                recipient.getId(),
+                actor.getId(),
+                NotificationType.NEW_POST,
+                post.getId(),
+                null,
+                null,
+                null
+        );
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.NOTIFICATION_EXCHANGE,
+                RabbitMQConfig.NOTIFICATION_ROUTING_KEY,
+                message
+        );
+    }
 }

@@ -8,5 +8,6 @@ public enum NotificationType {
     FOLLOW,
     FOLLOW_REQUEST,
     FOLLOW_ACCEPT,
-    FOLLOW_REJECT
+    FOLLOW_REJECT,
+    NEW_POST
 }

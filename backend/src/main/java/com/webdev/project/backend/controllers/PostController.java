@@ -2,14 +2,14 @@ package com.webdev.project.backend.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webdev.project.backend.dto.PostDTO;
+import com.webdev.project.backend.entities.Follow;
 import com.webdev.project.backend.entities.Post;
 import com.webdev.project.backend.entities.User;
 import com.webdev.project.backend.exceptions.ResourceNotFoundException;
+import com.webdev.project.backend.rabbitmq.NotificationProducer;
 import com.webdev.project.backend.requests.CreatePostRequest;
 import com.webdev.project.backend.requests.PostUpdateRequest;
-import com.webdev.project.backend.services.LikeService;
-import com.webdev.project.backend.services.PostService;
-import com.webdev.project.backend.services.UserService;
+import com.webdev.project.backend.services.*;
 import com.webdev.project.backend.utils.ResponseUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -29,11 +29,16 @@ public class PostController {
     private final PostService postService;
     private final UserService userService;
     private final LikeService likeService;
+    private final NotificationProducer notificationProducer;
+    private final FollowService followService;
+
     @Autowired
-    public PostController(PostService postService, UserService userService,LikeService likeService) {
+    public PostController(PostService postService, UserService userService, LikeService likeService, NotificationProducer notificationProducer, FollowService followService) {
         this.postService = postService;
         this.userService = userService;
         this.likeService = likeService;
+        this.notificationProducer = notificationProducer;
+        this.followService = followService;
     }
 
     @PostMapping
@@ -55,6 +60,14 @@ public class PostController {
 
             User user = userOptional.get();
             Post post = postService.createPost(request, imageFiles, user);
+
+            // Send notification to followers
+            List<Follow> follows = followService.getFollowers(user);
+
+            for (Follow follow : follows) {
+                notificationProducer.sendNewPostNotification(follow.getFollower(), user, post);
+            }
+
 
             ResponseEntity<PostDTO> originalResponse = ResponseEntity.status(HttpStatus.CREATED).body(new PostDTO(post));
             return ResponseUtil.success(originalResponse, "Post created successfully");

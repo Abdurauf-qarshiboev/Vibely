@@ -47,3 +47,5 @@ secrets.yml
 .git-hooks/
 node_modules
 /uploads/
+/.env
+/backend/.env
