@@ -10,10 +10,10 @@ export const AuthProvider = ({ children }) => {
   const [isAuth, setIsAuth] = useState(false);
   const navigate = useNavigate();
 
-  const signup = async (userData) => {
+  const signup = async (request) => {
     try {
-      console.log("Signing up with:", userData);
-      const { data } = await api.post("auth/register", userData);
+      console.log("Signing up with:", request);
+      const { data } = await api.post("auth/register", request);
       console.log("Signup response:", data);
       if (data?.error) {
         message.warning(data.error?.message || "Registration failed");

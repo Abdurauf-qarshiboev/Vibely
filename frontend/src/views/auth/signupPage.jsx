@@ -98,7 +98,6 @@ export default function SignupPage() {
       email: values.email,
       phone: values.phone,
       bio: values.bio || "",
-      role: "USER",
     };
 
     try {
