@@ -729,3 +729,12 @@ sup, .ant-badge-count{
 .user-list-modal.dark-theme .ant-empty-description {
   color: #a8a8a8;
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
