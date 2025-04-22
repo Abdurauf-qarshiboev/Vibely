@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo (not strictly needed, just standard)
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Deploy via SSH
@@ -23,5 +23,10 @@ jobs:
             cd webdev_project2
             git pull origin backend
             cd backend
+    
+            # Write secrets into .env file on the remote machine
+            echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" > .env
+            echo "CHAT_ID=${{ secrets.CHAT_ID }}" >> .env
+    
             docker-compose down --volumes=false
             docker-compose up --build -d
