@@ -1,0 +1,32 @@
+name: Deploy Spring Boot API
+
+on:
+  push:
+    branches:
+      - backend  # Trigger deploy on push to 'backend' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: root
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd webdev_project2
+            git pull origin backend
+            cd backend
+    
+            # Write secrets into .env file on the remote machine
+            echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" > .env
+            echo "CHAT_ID=${{ secrets.CHAT_ID }}" >> .env
+    
+            docker-compose down --volumes=false
+            docker-compose up --build -d

@@ -1,0 +1,122 @@
+services:
+  # Spring Boot Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web-project2-app
+    ports:
+      - "8085:8085"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=project2_db
+      - DB_USER=postgres
+      - DB_PASS=1649
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_SECURITY_USER_NAME=admin
+      - SPRING_SECURITY_USER_PASSWORD=0000
+      - RABBIT_HOST=rabbitmq
+      - RABBIT_USER=kalo
+      - RABBIT_PASS=kalo
+      - RABBIT_PORT=5672
+      - ELASTIC_HOST=elasticsearch
+      - ELASTIC_PORT=9200
+      - TELEGRAM_TOKEN=${BOT_TOKEN}
+      - TELEGRAM_CHAT=${CHAT_ID}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+    restart: unless-stopped
+    networks:
+      - app-network
+    volumes:
+      - ./uploads:/opt/app/uploads
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:latest
+    container_name: web-project2-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=project2_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1649
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d project2_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: web-project2-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: kalo
+      RABBITMQ_DEFAULT_PASS: kalo
+    configs:
+      - source: rabbitmq-plugins
+        target: /etc/rabbitmq/enabled_plugins
+    volumes:
+      - rabbitmq-lib:/var/lib/rabbitmq/
+      - rabbitmq-log:/var/log/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: web-project2-elastic
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-lib:
+    driver: local
+  rabbitmq-log:
+    driver: local
+  esdata01:
+
+configs:
+  rabbitmq-plugins:
+    content: "[rabbitmq_management]."
