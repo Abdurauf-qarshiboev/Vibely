@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Vibely - Project 2  [SE201]
 
 Vibely is a social media web application built with a modern tech stack featuring Spring Boot for the backend and ReactJS for the frontend.
@@ -106,7 +105,7 @@ Vibely allows users to connect, share moments, and interact in a vibrant online 
 
 1.  Clone the repository
     ```bash
-    git clone https://github.com/mehroj-r/webdev_project2.git`
+    git clone https://github.com/Abdurauf-qarshiboev/Vibely.git
     ```
 2.  Navigate to the backend folder:
     ```bash
@@ -123,7 +122,7 @@ Vibely allows users to connect, share moments, and interact in a vibrant online 
 
 1.  Clone the repository
     ```bash
-    git clone https://github.com/mehroj-r/webdev_project2.git`
+    git clone https://github.com/Abdurauf-qarshiboev/Vibely.git
     ```
 2.  Navigate to the frontend folder:
     ```bash
@@ -185,7 +184,7 @@ Welcome to the frontend of **Vibely**, a modern web application built using Reac
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/mehroj-r/webdev_project2.git
+   git clone https://github.com/Abdurauf-qarshiboev/Vibely.git
    cd webdev_project2
    ```
 
@@ -208,15 +207,13 @@ Welcome to the frontend of **Vibely**, a modern web application built using Reac
    ```
    http://localhost:5173
    ```
->>>>>>> frontend
 
 ---
 
 ## Project Structure
 
 ```
-<<<<<<< HEAD
-webdev_project2/
+Vibely/
 ├── backend/              # Spring Boot backend
 │   ├── src/             
 │   │   ├── main/        
@@ -243,12 +240,9 @@ frontend/
 │   └── App.jsx      # Main application component
 ├── package.json     # Project configuration and dependencies
 └── vite.config.js   # Vite configuration
->>>>>>> frontend
 ```
 
 ---
-
-<<<<<<< HEAD
 ## API Documentation
 
 The backend provides RESTful APIs for:
@@ -319,4 +313,4 @@ Last updated: April 22, 2025.*
 - **Axios**: For making API requests.
 
 ---
->>>>>>> frontend
+
