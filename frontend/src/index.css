@@ -1,0 +1,740 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root {
+  --bg-primary: #fff;
+  --bg-secondary: #000;
+  --text-primary-light: #000;
+  --text-secondary-light: #737373;
+  --border-light: rgba(219, 219, 219);
+  --border-dark: rgba(38, 38, 38);
+  --text-primary-dark: #f5f5f5;
+  --text-secondary-dark: #a8a8a8;
+  --link-primary-light: #00376b;
+  --link-primary-dark: #e0f1ff;
+  --lightblue: #0095f6;
+  --box-shadow-light: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  /* Dynamic theme variables */
+  --text-primary: var(--text-primary-light);
+  --text-secondary: var(--text-secondary-light);
+  --border: var(--border-light);
+  --link-primary: var(--link-primary-light);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.hide-scrollbar {
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+/* Layout styles */
+.ant-layout-sider {
+  max-width: 240px !important;
+  min-width: 240px !important;
+  width: 240px !important;
+  transition: background-color 0.3s ease !important;
+}
+[data-theme="light"] .ant-menu-root.ant-menu {
+  border: none !important;
+}
+.ant-menu-item {
+  display: flex !important;
+  align-items: center !important;
+}
+.ant-layout-sider-children {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Menu item styling */
+.ant-menu-item-selected {
+  background-color: none !important;
+}
+
+/* Dark theme styles */
+[data-theme="dark"] .ant-menu-item-selected {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Light theme styles */
+[data-theme="light"] .ant-menu-item-selected {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: #000;
+}
+
+/* Bold text for selected menu item */
+.ant-menu-item-selected .ant-menu-title-content {
+  font-weight: 700 !important;
+}
+
+/* Custom hover background for active item */
+[data-theme="dark"] .ant-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="light"] .ant-menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Modal styling */
+.ant-modal-content{
+  padding: 0 !important;
+}
+
+[data-theme="dark"] .ant-modal-content{
+  background: #262626;
+}
+
+[data-theme="light"] .ant-modal-content{
+  background: #fff;
+}
+
+/* Drawer close button styling */
+[data-theme="dark"] .ant-drawer-close,
+[data-theme="dark"] .ant-drawer-close:hover{
+  color: #fff !important;
+}
+
+[data-theme="light"] .ant-drawer-close,
+[data-theme="light"] .ant-drawer-close:hover{
+  color: #262626 !important;
+}
+
+/* Add smooth transitions */
+.ant-menu,
+.ant-menu-item,
+.ant-layout,
+.ant-layout-sider,
+.ant-layout-content,
+.ant-modal {
+  transition: all 0.3s ease !important;
+}
+
+.ant-empty{
+  margin-top: 100px !important;
+}
+/* =====================================
+   SEARCH DRAWER SPECIFIC STYLES
+   ===================================== */
+
+/* Search input styling */
+.search-input.ant-input-affix-wrapper {
+  border-radius: 0.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Dark theme input styling */
+[data-theme="dark"] .search-input.ant-input-affix-wrapper {
+  background-color: #262626 !important;
+  border-color: #424242 !important;
+}
+
+[data-theme="dark"] .search-input.ant-input-affix-wrapper:hover,
+[data-theme="dark"] .search-input.ant-input-affix-wrapper:focus,
+[data-theme="dark"] .search-input.ant-input-affix-wrapper-focused {
+  border-color: #505050 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .search-input.ant-input-affix-wrapper input.ant-input {
+  background-color: #262626 !important;
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-input.ant-input-affix-wrapper input.ant-input::placeholder {
+  color: #a8a8a8 !important;
+}
+
+/* Light theme input styling */
+[data-theme="light"] .search-input.ant-input-affix-wrapper {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+}
+
+[data-theme="light"] .search-input.ant-input-affix-wrapper:hover,
+[data-theme="light"] .search-input.ant-input-affix-wrapper:focus,
+[data-theme="light"] .search-input.ant-input-affix-wrapper-focused {
+  border-color: #b0b0b0 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .search-input.ant-input-affix-wrapper input.ant-input {
+  background-color: #f5f5f5 !important;
+  color: #000 !important;
+}
+
+[data-theme="light"] .search-input.ant-input-affix-wrapper input.ant-input::placeholder {
+  color: #737373 !important;
+}
+
+/* Tab styling improvements */
+/* Light theme tab styling */
+[data-theme="light"] .ant-tabs-tab {
+  color: #8e8e8e !important; /* Lighter gray for inactive tabs */
+  transition: color 0.2s ease;
+}
+
+[data-theme="light"] .ant-tabs-tab:hover {
+  color: #555555 !important; /* Slightly darker on hover */
+}
+
+[data-theme="light"] .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #000000 !important; /* Dark for active tab */
+  font-weight: 600;
+}
+
+[data-theme="light"] .ant-tabs-ink-bar {
+  background: #000000 !important; /* Dark underline for active tab */
+  height: 2px !important;
+}
+
+/* Dark theme tab styling refinements */
+[data-theme="dark"] .ant-tabs-tab {
+  color: #8e8e8e !important; /* Medium gray for inactive */
+  transition: color 0.2s ease;
+}
+
+[data-theme="dark"] .ant-tabs-tab:hover {
+  color: #b8b8b8 !important; /* Lighter gray on hover */
+}
+
+[data-theme="dark"] .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #ffffff !important; /* Bright white for active */
+  font-weight: 600;
+}
+
+[data-theme="dark"] .ant-tabs-ink-bar {
+  background: #ffffff !important;
+  height: 2px !important;
+}
+
+/* Search drawer styling */
+/* Dark theme drawer styling */
+[data-theme="dark"] .search-drawer .ant-tabs-tab {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-tabs-ink-bar {
+  background: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-empty-description {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper {
+  background-color: #262626 !important;
+  border-color: #424242 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper:hover,
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper:focus,
+[data-theme="dark"] .search-drawer .ant-input-affix-wrapper-focused {
+  border-color: #505050 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input {
+  background-color: #262626 !important;
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-drawer .ant-input-clear-icon {
+  color: #a8a8a8 !important;
+}
+
+/* Light theme drawer styling */
+[data-theme="light"] .search-drawer .ant-tabs-tab {
+  color: #8e8e8e !important;
+}
+
+[data-theme="light"] .search-drawer .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #000000 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-tabs-ink-bar {
+  background: #000000 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-empty-description {
+  color: #737373 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper:hover,
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper:focus,
+[data-theme="light"] .search-drawer .ant-input-affix-wrapper-focused {
+  border-color: #b0b0b0 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input {
+  background-color: #f5f5f5 !important;
+  color: #000000 !important;
+}
+
+[data-theme="light"] .search-drawer .ant-input-clear-icon {
+  color: #737373 !important;
+}
+
+/* Search Result Items - Light Theme */
+[data-theme="light"] .search-result-item {
+  background-color: #ffffff !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="light"] .search-result-item:hover {
+  border-color: #c0c0c0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Search Result Items - Dark Theme */
+[data-theme="dark"] .search-result-item {
+  background-color: #232323 !important;
+  border: 1px solid #424242 !important;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .search-result-item:hover {
+  border-color: #535353 !important;
+  background-color: #303030 !important;
+}
+
+/* User and Hashtag item specific styling */
+/* Text colors for dark theme */
+[data-theme="dark"] .search-result-username {
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .search-result-fullname {
+  color: #a8a8a8 !important;
+}
+
+[data-theme="dark"] .search-result-hashtag {
+  color: #f5f5f5 !important;
+}
+
+/* Text colors for light theme */
+[data-theme="light"] .search-result-username {
+  color: #000000 !important;
+}
+
+[data-theme="light"] .search-result-fullname {
+  color: #737373 !important;
+}
+
+[data-theme="light"] .search-result-hashtag {
+  color: #000000 !important;
+}
+
+/* Badge styling */
+[data-theme="dark"] .search-result-count-badge {
+  background-color: #262626 !important;
+  color: #a8a8a8 !important;
+}
+
+[data-theme="light"] .search-result-count-badge {
+  background-color: #f0f0f0 !important;
+  color: #737373 !important;
+}
+
+/* Add transition to all elements for smooth theme switching */
+.search-drawer * {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s !important;
+}
+
+/* Drawer footer styling */
+[data-theme="dark"] .ant-drawer-footer {
+  border-top-color: #424242 !important;
+  background-color: #262626 !important;
+}
+
+[data-theme="light"] .ant-drawer-footer {
+  border-top-color: #e8e8e8 !important;
+  background-color: #fff !important;
+}
+
+/* Drawer header styling */
+[data-theme="dark"] .ant-drawer-header {
+  background-color: #262626 !important;
+  border-bottom-color: #424242 !important;
+}
+
+[data-theme="dark"] .ant-drawer-title {
+  color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .ant-drawer-body {
+  background-color: #262626 !important;
+}
+
+[data-theme="light"] .ant-drawer-header {
+  background-color: #fff !important;
+  border-bottom-color: #e8e8e8 !important;
+}
+
+[data-theme="light"] .ant-drawer-title {
+  color: #000 !important;
+}
+
+[data-theme="light"] .ant-drawer-body {
+  background-color: #fff !important;
+}
+
+/* Spin/loader styling */
+[data-theme="dark"] .ant-spin-dot i {
+  background-color: #f5f5f5 !important;
+}
+
+[data-theme="dark"] .ant-spin-text {
+  color: #f5f5f5 !important;
+}
+
+[data-theme="light"] .ant-spin-dot i {
+  background-color: #1677ff !important;
+}
+
+[data-theme="light"] .ant-spin-text {
+  color: #000 !important;
+}
+
+/* Empty state styling */
+[data-theme="dark"] .ant-empty-image svg path {
+  fill: #424242 !important;
+}
+
+[data-theme="light"] .ant-empty-image svg path {
+  fill: #d9d9d9 !important;
+}
+
+/* Drawer animation */
+.ant-drawer-content-wrapper {
+  transition: transform 0.3s ease !important;
+}
+
+/* Drawer content styling */
+.drawer-light .ant-drawer-content {
+  background-color: #fff !important;
+}
+
+.drawer-dark .ant-drawer-content {
+  background-color: #262626 !important;
+}
+
+/* Makes sure theme data attribute is correctly applied to the drawer content */
+.ant-drawer[data-theme="light"] .ant-drawer-content,
+.ant-drawer[data-theme="dark"] .ant-drawer-content {
+  transition: background-color 0.3s ease;
+}
+
+.ant-drawer[data-theme="light"] .ant-drawer-content {
+  background-color: #fff !important;
+}
+
+.ant-drawer[data-theme="dark"] .ant-drawer-content {
+  background-color: #262626 !important;
+}
+
+/* Higher priority theme styles for search drawer */
+div[data-theme="light"].search-drawer {
+  background-color: #fff !important;
+}
+
+div[data-theme="dark"].search-drawer {
+  background-color: #262626 !important;
+}
+
+/* Make sure the drawer wrapper gets the theme */
+.ant-drawer-content-wrapper[data-theme="light"] .ant-drawer-content {
+  background-color: #fff !important;
+}
+
+.ant-drawer-content-wrapper[data-theme="dark"] .ant-drawer-content {
+  background-color: #262626 !important;
+}
+
+/* Fix for drawer backdrop */
+[data-theme="light"] .ant-drawer-mask {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="dark"] .ant-drawer-mask {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Fix email links color */
+div[data-theme="light"] a {
+  color: #00376b !important;
+}
+
+div[data-theme="dark"] a {
+  color: #4b96ff !important;
+}
+
+/* Blog Post Styling */
+[data-theme="dark"] .post-dark {
+  color: #f5f5f5;
+}
+
+[data-theme="light"] .post-light {
+  color: #000;
+}
+
+/* Comments modal styling */
+[data-theme="dark"] .headlessui-dialog {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="light"] .headlessui-dialog {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Hashtag styling */
+[data-theme="dark"] a.hashtag {
+  color: #58a6ff !important;
+  text-decoration: none;
+}
+
+[data-theme="light"] a.hashtag {
+  color: #0095f6 !important;
+  text-decoration: none;
+}
+
+/* Blog text in dark mode */
+[data-theme="dark"] .blog-text {
+  color: #f5f5f5;
+}
+
+/* Blog comment areas in dark mode */
+[data-theme="dark"] textarea.comment-input {
+  background-color: #000;
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] textarea.comment-input::placeholder {
+  color: #737373;
+}
+
+/* Make sure dialogs have the correct theme */
+.headlessui-dialog[data-theme="dark"] .headlessui-dialog-panel {
+  background-color: #121212;
+  color: #f5f5f5;
+}
+
+.headlessui-dialog[data-theme="light"] .headlessui-dialog-panel {
+  background-color: #fff;
+  color: #000;
+}
+
+/* Carousel Styles for posts */
+.carousel-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+}
+
+[data-theme="dark"] .carousel-container {
+  background-color: transparent !important;
+}
+
+.carousel-item {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* Custom arrow positioning */
+.custom-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 10;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.custom-arrow:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.prev-arrow {
+  left: 10px;
+}
+
+.next-arrow {
+  right: 10px;
+}
+
+/* Custom dots styling */
+.ant-carousel .slick-dots.custom-dots {
+  bottom: 12px;
+}
+
+.ant-carousel .slick-dots.custom-dots li button {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 50%;
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.ant-carousel .slick-dots.custom-dots li.slick-active button {
+  background: white !important;
+}
+
+/* Apply consistent aspect ratio */
+.post-carousel .slick-list,
+.post-carousel .slick-track,
+.post-carousel .slick-slide > div {
+  height: 100%;
+}
+
+.carousel-item img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .custom-arrow {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .custom-arrow svg {
+    font-size: 14px;
+  }
+  
+  .ant-carousel .slick-dots.custom-dots {
+    bottom: 8px;
+  }
+  
+  .ant-carousel .slick-dots.custom-dots li button {
+    width: 6px !important;
+    height: 6px !important;
+  }
+}
+
+/* For the comment modal carousel */
+.post-carousel .slick-track,
+.post-carousel .slick-slide,
+.post-carousel .slick-slide > div {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Additional style for the comment modal */
+.carousel-container.comment-modal {
+  background-color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Fix for images in the comment modal */
+.carousel-item img.object-contain {
+  max-height: 100%;
+  margin: 0 auto;
+}
+
+bdi{
+  display: grid !important;
+  place-content: center !important;
+}
+
+sup, .ant-badge-count{
+  z-index: 90 !important;
+  font-size: 11px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+}
+.ant-scroll-number-only{
+  height: 11px !important;
+}
+#avatarinput{
+  display: none !important;
+}
+
+/* Add these styles to your CSS file */
+.user-list-modal .ant-modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.user-list-modal .ant-modal-header {
+  margin-bottom: 0;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.user-list-modal .ant-modal-title {
+  font-weight: 600;
+  text-align: center;
+}
+
+.user-list-modal .ant-modal-close {
+  right: 16px;
+}
+
+.user-list-modal .ant-input::placeholder {
+  color: #8e8e8e;
+}
+
+.user-list-modal.dark-theme .ant-modal-content {
+  background-color: #262626;
+  color: white;
+}
+
+.user-list-modal.dark-theme .ant-modal-header {
+  background-color: #262626;
+  border-bottom-color: #373737;
+}
+
+.user-list-modal.dark-theme .ant-modal-title {
+  color: white;
+}
+
+.user-list-modal.dark-theme .ant-empty-description {
+  color: #a8a8a8;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
