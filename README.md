@@ -109,7 +109,7 @@ Vibely allows users to connect, share moments, and interact in a vibrant online 
     ```
 2.  Navigate to the backend folder:
     ```bash
-    cd webdev_project2/backend
+    cd Vibely/backend
     ```
 3. Docker compose init
     ```bash
@@ -126,7 +126,7 @@ Vibely allows users to connect, share moments, and interact in a vibrant online 
     ```
 2.  Navigate to the frontend folder:
     ```bash
-    cd webdev_project2/frontend
+    cd Vibely/frontend
     ```
 3. Install dependencies
     ```bash
@@ -185,7 +185,7 @@ Welcome to the frontend of **Vibely**, a modern web application built using Reac
 1. Clone the repository:
    ```bash
    git clone https://github.com/Abdurauf-qarshiboev/Vibely.git
-   cd webdev_project2
+   cd Vibely
    ```
 
 2. Navigate to the frontend directory (if applicable):
@@ -221,25 +221,18 @@ Vibely/
 │   │   │   └── resources/ # Configuration files
 │   │   └── test/        # Test files
 ├── frontend/             # ReactJS frontend
-│   ├── public/          # Static files
+│   ├── public/          # Static assets
 │   ├── src/             # React components and logic
-│   │   ├── components/  # UI components
-│   │   ├── pages/       # Page components
-│   │   ├── services/    # API services
-│   │   └── styles/      # CSS styles
-=======
-frontend/
-├── public/          # Static assets
-├── src/
-│   ├── components/  # Reusable components
-│   ├── context/     # React Context for state management
-│   ├── pages/       # Application pages
-│   ├── routes/      # Routing configuration
-│   ├── styles/      # TailwindCSS and global styles
-│   ├── utils/       # Utility functions
-│   └── App.jsx      # Main application component
-├── package.json     # Project configuration and dependencies
-└── vite.config.js   # Vite configuration
+│   │   ├── components/  # Reusable components
+│   │   ├── context/     # React Context for state management
+│   │   ├── pages/       # Application pages
+│   │   ├── routes/      # Routing configuration
+│   │   ├── styles/      # TailwindCSS and global styles
+│   │   ├── utils/       # Utility functions
+│   │   └── App.jsx      # Main application component
+│   ├── components.json  # Shadcn UI components
+│   ├── package.json     # Project configuration and dependencies
+└── └── vite.config.js   # Vite configuration
 ```
 
 ---
@@ -308,6 +301,7 @@ Last updated: April 22, 2025.*
 - **React Router**: For client-side routing.
 - **React Context**: For state management.
 - **Ant Design (Antd)**: For UI components.
+- **Shadcn UI**: For built-in component usage from Shadcn UI.
 - **TailwindCSS**: For styling.
 - **Heroicons**: For icons.
 - **Axios**: For making API requests.
